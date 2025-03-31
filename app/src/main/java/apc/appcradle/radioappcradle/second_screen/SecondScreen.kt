@@ -4,6 +4,7 @@ import android.Manifest
 import android.content.Context
 import android.os.Build
 import android.provider.MediaStore
+import android.util.Log
 import androidx.annotation.RequiresApi
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -21,6 +22,7 @@ import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.ArrowForward
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -30,6 +32,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -81,7 +84,12 @@ fun SecondScreen(
                 }
             )
         },
-        bottomBar = { PlaybackControls() }
+        bottomBar = {
+            PlaybackControls(
+                viewModel = viewModel,
+                trackList = localTracks
+            )
+        }
     ) { innerPadding ->
         if (!storagePermissionState.status.isGranted) {
             Column(
@@ -123,12 +131,9 @@ fun SecondScreen(
                         modifier = Modifier.fillMaxSize()
                     ) {
                         items(localTracks.size) { index ->
-                            Card(
-                                content = { Text(localTracks[index].name) },
-                                modifier = Modifier
-                                    .clickable {
-                                    }
-                                    .padding(8.dp)
+                            TrackItem(
+                                track = localTracks[index],
+                                onClick = { viewModel.playLocalFile(localTracks[index].data) }
                             )
                         }
                     }
@@ -138,30 +143,56 @@ fun SecondScreen(
     }
 }
 
+@Composable
+fun TrackItem(track: Track, onClick: () -> Unit) {
+    Card(
+        modifier = Modifier
+            .clickable(onClick = onClick)
+            .padding(8.dp)
+    ) {
+        Row(
+            modifier = Modifier.padding(16.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = track.name,
+                modifier = Modifier.weight(1f)
+            )
+            Icon(
+                imageVector = Icons.Default.PlayArrow,
+                contentDescription = "Play"
+            )
+        }
+    }
+}
+
 
 @Composable
-fun PlaybackControls() {
+fun PlaybackControls(
+    viewModel: MainViewModel,
+    trackList: List<Track>
+) {
+    val isPlaying by viewModel.playbackState.collectAsState()
+//todo доделать переключение на следующий трек
     Row(
         modifier = Modifier
             .fillMaxWidth()
             .padding(8.dp),
         horizontalArrangement = Arrangement.SpaceEvenly
     ) {
-        IconButton(
-            onClick = {
-
-            }) {
-            Icon(Icons.Default.ArrowBack, contentDescription = "Previous")
+        IconButton(onClick = { /* Реализуйте переход к предыдущему треку */ }) {
+            Icon(Icons.Default.ArrowBack, "Previous")
         }
-        IconButton(onClick = {
 
-        }) {
-            Icon(Icons.Default.PlayArrow, contentDescription = "Play/Pause")
+        IconButton(onClick = { viewModel.togglePlayPause() }) {
+            Icon(
+                imageVector = if (isPlaying) Icons.Default.Star else Icons.Default.PlayArrow,
+                contentDescription = "Play/Pause"
+            )
         }
-        IconButton(onClick = {
 
-        }) {
-            Icon(Icons.Default.ArrowForward, contentDescription = "Next")
+        IconButton(onClick = { /* Реализуйте переход к следующему треку */ }) {
+            Icon(Icons.Default.ArrowForward, "Next")
         }
     }
 }
@@ -189,6 +220,7 @@ private fun getLocalMusicFiles(context: Context): List<Track> {
             val name = cursor.getString(nameColumn)
             val data = cursor.getString(dataColumn)
             trackList.add(Track(id, name, data))
+            Log.i("database", "data = $data, id=$id, name = $name")
         }
     }
     return trackList

@@ -5,13 +5,19 @@ import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.media3.common.MediaItem
 import androidx.media3.common.MediaMetadata
+import androidx.media3.common.MimeTypes
 import androidx.media3.common.Player
 import androidx.media3.session.MediaController
 import androidx.media3.session.SessionToken
 import com.google.common.util.concurrent.ListenableFuture
 import com.google.common.util.concurrent.MoreExecutors
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
 
 class MainViewModel() : ViewModel() {
+
+    private val _playbackState = MutableStateFlow(false)
+    val playbackState: StateFlow<Boolean> = _playbackState
 
     private lateinit var controller: MediaController
     internal var mediaControllerFuture: ListenableFuture<MediaController>? = null
@@ -29,6 +35,18 @@ class MainViewModel() : ViewModel() {
         }
     }
 
+    fun playLocalFile(filePath: String) {
+        if (!::controller.isInitialized) return
+        val uri = "file://$filePath"
+        val mediaItem = MediaItem.Builder()
+            .setMediaId(uri)
+            .setMimeType(MimeTypes.AUDIO_MPEG)
+            .build()
+        controller.setMediaItem(mediaItem)
+        controller.prepare()
+        controller.play()
+    }
+
     fun playStream(url: String) {
         val mediaItem = MediaItem.Builder()
             .setMediaId(url)
@@ -41,6 +59,14 @@ class MainViewModel() : ViewModel() {
         controller.setMediaItem(mediaItem)
         controller.prepare()
         controller.play()
+    }
+
+    fun togglePlayPause() {
+        if (controller.isPlaying) {
+            controller.pause()
+        } else {
+            controller.play()
+        }
     }
 
     override fun onCleared() {
