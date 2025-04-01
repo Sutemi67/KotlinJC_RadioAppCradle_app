@@ -6,6 +6,7 @@ import android.os.Build
 import android.provider.MediaStore
 import android.util.Log
 import androidx.annotation.RequiresApi
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -18,11 +19,8 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
-import androidx.compose.material.icons.filled.ArrowForward
 import androidx.compose.material.icons.filled.PlayArrow
-import androidx.compose.material.icons.filled.Search
-import androidx.compose.material.icons.filled.Star
+import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -32,16 +30,21 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import apc.appcradle.radioappcradle.MainViewModel
+import apc.appcradle.radioappcradle.R
+import apc.appcradle.radioappcradle.domain.PlayerState
 import apc.appcradle.radioappcradle.domain.Track
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.google.accompanist.permissions.isGranted
@@ -57,6 +60,8 @@ fun SecondScreen(
     val context = LocalContext.current
     var localTracks by remember { mutableStateOf<List<Track>>(emptyList()) }
     var isSearched by remember { mutableStateOf(false) }
+
+    val playerState = viewModel.playingState.collectAsStateWithLifecycle()
 
     val storagePermissionState =
         rememberPermissionState(permission = Manifest.permission.READ_MEDIA_AUDIO)
@@ -79,7 +84,7 @@ fun SecondScreen(
                                 storagePermissionState.launchPermissionRequest()
                             }
                         }) {
-                        Icon(Icons.Default.Search, contentDescription = "Search")
+                        Icon(Icons.Default.Refresh, contentDescription = "Search")
                     }
                 }
             )
@@ -113,7 +118,10 @@ fun SecondScreen(
                         .padding(innerPadding),
                     contentAlignment = Alignment.Center
                 ) {
-                    Text("Нажмите на значок поиска, чтобы найти локальные треки")
+                    Text(
+                        textAlign = TextAlign.Center,
+                        text = "Нажмите на значок обновления списка, чтобы найти локальные треки"
+                    )
                 }
             } else {
                 if (localTracks.isEmpty()) {
@@ -133,7 +141,9 @@ fun SecondScreen(
                         items(localTracks.size) { index ->
                             TrackItem(
                                 track = localTracks[index],
-                                onClick = { viewModel.playLocalFile(localTracks[index].data) }
+                                onClick = {
+                                    viewModel.playLocalFile(localTracks[index].data, index)
+                                }
                             )
                         }
                     }
@@ -172,27 +182,32 @@ fun PlaybackControls(
     viewModel: MainViewModel,
     trackList: List<Track>
 ) {
-    val isPlaying by viewModel.playbackState.collectAsState()
-//todo доделать переключение на следующий трек
+    val playerState = viewModel.playingState.collectAsStateWithLifecycle()
+
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(8.dp),
+            .background(color = Color.LightGray),
         horizontalArrangement = Arrangement.SpaceEvenly
     ) {
-        IconButton(onClick = { /* Реализуйте переход к предыдущему треку */ }) {
-            Icon(Icons.Default.ArrowBack, "Previous")
+        IconButton(onClick = { viewModel.playPrevious() }) {
+            Icon(painterResource(R.drawable.previous_button), "Previous")
         }
 
-        IconButton(onClick = { viewModel.togglePlayPause() }) {
+        IconButton(onClick = {
+            viewModel.playTrackList(trackList)
+        }) {
             Icon(
-                imageVector = if (isPlaying) Icons.Default.Star else Icons.Default.PlayArrow,
+                painter = when (playerState.value) {
+                    PlayerState.PlayingQueue -> painterResource(R.drawable.pause)
+                    else -> painterResource(R.drawable.play)
+                },
                 contentDescription = "Play/Pause"
             )
         }
 
-        IconButton(onClick = { /* Реализуйте переход к следующему треку */ }) {
-            Icon(Icons.Default.ArrowForward, "Next")
+        IconButton(onClick = { viewModel.playNext() }) {
+            Icon(painterResource(R.drawable.next_button), "Next")
         }
     }
 }
@@ -202,7 +217,8 @@ private fun getLocalMusicFiles(context: Context): List<Track> {
     val projection = arrayOf(
         MediaStore.Audio.Media._ID,
         MediaStore.Audio.Media.DISPLAY_NAME,
-        MediaStore.Audio.Media.DATA
+        MediaStore.Audio.Media.DATA,
+        MediaStore.Audio.Media.DURATION,
     )
     val selection = "${MediaStore.Audio.Media.IS_MUSIC} != 0"
     context.contentResolver.query(
@@ -215,12 +231,16 @@ private fun getLocalMusicFiles(context: Context): List<Track> {
         val idColumn = cursor.getColumnIndexOrThrow(MediaStore.Audio.Media._ID)
         val nameColumn = cursor.getColumnIndexOrThrow(MediaStore.Audio.Media.DISPLAY_NAME)
         val dataColumn = cursor.getColumnIndexOrThrow(MediaStore.Audio.Media.DATA)
+        val duration = cursor.getColumnIndexOrThrow(MediaStore.Audio.Media.DURATION)
         while (cursor.moveToNext()) {
             val id = cursor.getLong(idColumn)
             val name = cursor.getString(nameColumn)
             val data = cursor.getString(dataColumn)
-            trackList.add(Track(id, name, data))
-            Log.i("database", "data = $data, id=$id, name = $name")
+            val duration = cursor.getInt(duration)
+            trackList.add(Track(id, name, data, duration))
+            Log.i(
+                "database", "data = $data, \nid=$id, \nname = $name,\nduration = $duration"
+            )
         }
     }
     return trackList
