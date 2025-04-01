@@ -5,17 +5,29 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.annotation.RequiresApi
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SecondaryTabRow
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Tab
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.core.view.WindowCompat
 import apc.appcradle.radioappcradle.first_screen.FirstScreen
 import apc.appcradle.radioappcradle.second_screen.SecondScreen
+import apc.appcradle.radioappcradle.ui.theme.RadioAppCradleTheme
+import apc.appcradle.radioappcradle.ui.theme.Typography
+import kotlinx.coroutines.launch
 import org.koin.androidx.compose.koinViewModel
 
 
@@ -25,7 +37,11 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
-            MyApp()
+            RadioAppCradleTheme {
+                Surface {
+                    MyApp()
+                }
+            }
         }
     }
 }
@@ -36,22 +52,38 @@ class MainActivity : ComponentActivity() {
 fun MyApp() {
     val pagerState = rememberPagerState(pageCount = { 2 })
     val viewModel: MainViewModel = koinViewModel()
-
+    val pages = listOf("Online Radio", "Local Music")
+    val coroutineScope = rememberCoroutineScope()
     Scaffold(
         topBar = {
-            TopAppBar(title = { Text(text = "My Music App") })
+            TopAppBar(title = { Text(text = "AppCradle Audio player",style = Typography.h1) })
         }
     ) { paddingValues ->
-        HorizontalPager(
-            state = pagerState,
-            modifier = Modifier.padding(paddingValues)
-        ) { page ->
-            when (page) {
-                0 -> FirstScreen(viewModel = viewModel)
-                1 -> SecondScreen(viewModel = viewModel)
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(Color.Transparent)
+                .padding(paddingValues)
+        ) {
+            SecondaryTabRow(
+                selectedTabIndex = pagerState.currentPage
+            ) {
+                pages.forEachIndexed { index, title ->
+                    Tab(
+                        selected = pagerState.currentPage == index,
+                        onClick = { coroutineScope.launch { pagerState.animateScrollToPage(index) } },
+                        text = { Text(title,style = Typography.labels) })
+                }
+            }
+            HorizontalPager(
+                state = pagerState,
+            ) { page ->
+                when (page) {
+                    0 -> FirstScreen(viewModel = viewModel)
+                    1 -> SecondScreen(viewModel = viewModel)
+                }
             }
         }
     }
 }
-
 

@@ -18,13 +18,15 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 
 class MainViewModel() : ViewModel() {
-    private var playingTrackIndex: Int? = null
     private var playerQueuePrepared = false
+
+    private val _playingTrackIndex = MutableStateFlow<Int?>(null)
+    val playingTrackIndex: StateFlow<Int?> = _playingTrackIndex.asStateFlow()
 
     private val _playingState = MutableStateFlow<PlayerState>(PlayerState.Stopped)
     val playingState: StateFlow<PlayerState> = _playingState.asStateFlow()
 
-    private lateinit var controller: MediaController
+    lateinit var controller: MediaController
     internal var mediaControllerFuture: ListenableFuture<MediaController>? = null
 
     fun initializeMediaController(context: Context) {
@@ -35,22 +37,24 @@ class MainViewModel() : ViewModel() {
         mediaControllerFuture?.apply {
             addListener(Runnable {
                 controller = get()
-                updateUIWithMediaController(controller)
+                updateUIWithMediaController(controller!!)
             }, MoreExecutors.directExecutor())
         }
     }
 
+
     fun playLocalFile(filePath: String, index: Int) {
-        if (controller.isPlaying && playingTrackIndex == index) {
+        if (playingState.value == PlayerState.PlayingSolo && playingTrackIndex.value == index) {
             controller.pause()
             _playingState.value = PlayerState.PausedSolo
+            _playingTrackIndex.value = null
         } else {
-            if (playingTrackIndex == index) {
+            if (playingTrackIndex.value == index) {
                 controller.play()
                 _playingState.value = PlayerState.PlayingSolo
                 return
             }
-            playingTrackIndex = index
+            _playingTrackIndex.value = index
             val uri = "file://$filePath"
             val mediaItem = MediaItem.Builder()
                 .setMediaId(uri)
@@ -63,16 +67,44 @@ class MainViewModel() : ViewModel() {
         }
     }
 
+    fun playStream(url: String) {
+        when (playingState.value) {
+            PlayerState.PlayingStream -> {
+                controller.stop()
+                _playingState.value = PlayerState.Stopped
+            }
+
+            else -> {
+                val mediaItem = MediaItem.Builder()
+                    .setMediaId(url)
+                    .setMediaMetadata(
+                        MediaMetadata.Builder()
+                            .setTitle("Radio Player")
+                            .build()
+                    ).build()
+
+                controller.setMediaItem(mediaItem)
+                controller.prepare()
+                controller.play()
+                _playingState.value = PlayerState.PlayingStream
+                _playingTrackIndex.value = null
+            }
+        }
+    }
+
     fun playTrackList(tracks: List<Track>) {
         if (tracks.isEmpty()) return
-        if (controller.isPlaying) {
+        if (playingState.value == PlayerState.PlayingQueue) {
             controller.pause()
             _playingState.value = PlayerState.PausedQueue
         } else {
-            if (playerQueuePrepared) {
-                controller.play()
-                _playingState.value = PlayerState.PlayingQueue
-                return
+            if (!controller.isPlaying) {
+                if (playerQueuePrepared) {
+                    controller.play()
+                    _playingState.value = PlayerState.PlayingQueue
+                    _playingTrackIndex.value = null
+                    return
+                }
             }
             val mediaItems = tracks.map { track ->
                 MediaItem.Builder()
@@ -80,12 +112,14 @@ class MainViewModel() : ViewModel() {
                     .setMimeType(MimeTypes.AUDIO_MPEG)
                     .build()
             }
+            controller.shuffleModeEnabled = true
             controller.setMediaItems(mediaItems)
             controller.repeatMode = Player.REPEAT_MODE_ALL
             controller.prepare()
             controller.play()
             playerQueuePrepared = true
             _playingState.value = PlayerState.PlayingQueue
+            _playingTrackIndex.value = null
         }
     }
 
@@ -99,20 +133,6 @@ class MainViewModel() : ViewModel() {
         if (controller.hasPreviousMediaItem()) {
             controller.seekToPrevious()
         }
-    }
-
-    fun playStream(url: String) {
-        val mediaItem = MediaItem.Builder()
-            .setMediaId(url)
-            .setMediaMetadata(
-                MediaMetadata.Builder()
-                    .setTitle("Radio Player")
-                    .build()
-            ).build()
-
-        controller.setMediaItem(mediaItem)
-        controller.prepare()
-        controller.play()
     }
 
     override fun onCleared() {
