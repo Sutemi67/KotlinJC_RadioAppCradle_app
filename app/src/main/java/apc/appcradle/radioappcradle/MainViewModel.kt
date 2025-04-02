@@ -19,6 +19,7 @@ import com.google.common.util.concurrent.MoreExecutors
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -187,6 +188,7 @@ class MainViewModel(
     }
 
     suspend fun loadTrackList(): List<Track> = withContext(Dispatchers.IO) {
+//        delay(500L)
         val itemType = object : TypeToken<List<Track>>() {}.type
         val json = sharedPrefs.getString(TRACKLIST_SAVE_KEY, null) ?: return@withContext emptyList()
         Gson().fromJson(json, itemType)

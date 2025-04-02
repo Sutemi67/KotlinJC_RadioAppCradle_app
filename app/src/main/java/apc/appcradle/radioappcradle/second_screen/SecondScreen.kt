@@ -82,9 +82,6 @@ fun SecondScreen(
         Manifest.permission.READ_EXTERNAL_STORAGE
     }
     val storagePermissionState = rememberPermissionState(permission = permission)
-//    val storagePermissionState =
-//        rememberPermissionState(permission = Manifest.permission.READ_MEDIA_AUDIO)
-//        rememberPermissionState(permission = Manifest.permission.READ_EXTERNAL_STORAGE)
 
     fun searchLocalMusicFiles() {
         localTracks = getLocalMusicFiles(context, viewModel)
@@ -95,8 +92,14 @@ fun SecondScreen(
         topBar = {
             TopAppBar(
                 title = {
-                    if (localTracks.isEmpty()) Text("Local Music", style = Typography.h2)
-                    else Text("Local Music: ${localTracks.size} tracks", style = Typography.h2)
+                    if (localTracks.isEmpty()) {
+                        Column {
+                            Text("Local Music", style = Typography.h2)
+                            if (isLoading) LinearProgressIndicator(Modifier.height(1.dp))
+                        }
+                    } else {
+                        Text("Local Music: ${localTracks.size} tracks", style = Typography.h2)
+                    }
                 },
                 actions = {
                     IconButton(
@@ -139,6 +142,7 @@ fun SecondScreen(
             }
         } else {
             if (!isSearched) {
+
                 Box(
                     modifier = Modifier
                         .fillMaxSize()
@@ -153,36 +157,32 @@ fun SecondScreen(
                     )
                 }
             } else {
-                if (isLoading) {
-                    LinearProgressIndicator()
+                if (localTracks.isEmpty()) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(innerPadding)
+                            .padding(horizontal = 10.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = "Локальные треки не найдены.",
+                            style = Typography.labels
+                        )
+                    }
                 } else {
-                    if (localTracks.isEmpty()) {
-                        Box(
-                            modifier = Modifier
-                                .fillMaxSize()
-                                .padding(innerPadding)
-                                .padding(horizontal = 10.dp),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Text(
-                                text = "Локальные треки не найдены.",
-                                style = Typography.labels
+                    LazyColumn(
+                        contentPadding = innerPadding,
+                        modifier = Modifier.fillMaxSize()
+                    ) {
+                        items(localTracks.size) { index ->
+                            TrackItem(
+                                track = localTracks[index],
+                                onClick = {
+                                    viewModel.playLocalFile(localTracks[index].data, index)
+                                },
+                                state = playingTrackIndex.value == index
                             )
-                        }
-                    } else {
-                        LazyColumn(
-                            contentPadding = innerPadding,
-                            modifier = Modifier.fillMaxSize()
-                        ) {
-                            items(localTracks.size) { index ->
-                                TrackItem(
-                                    track = localTracks[index],
-                                    onClick = {
-                                        viewModel.playLocalFile(localTracks[index].data, index)
-                                    },
-                                    state = playingTrackIndex.value == index
-                                )
-                            }
                         }
                     }
                 }
