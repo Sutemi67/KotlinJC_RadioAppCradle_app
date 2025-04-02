@@ -73,4 +73,7 @@ dependencies {
 
     //Koin
     implementation (libs.koin.androidx.compose)
+
+    //Gson
+    implementation (libs.gson)
 }

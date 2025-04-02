@@ -7,7 +7,6 @@ import android.util.Log
 import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.EaseIn
 import androidx.compose.animation.core.tween
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -63,19 +62,22 @@ fun SecondScreen(
     viewModel: MainViewModel
 ) {
     val context = LocalContext.current
-    LaunchedEffect(Unit) {
-        viewModel.initializeMediaController(context)
-    }
     var localTracks by remember { mutableStateOf<List<Track>>(emptyList()) }
     var isSearched by remember { mutableStateOf(false) }
     var playingTrackIndex = viewModel.playingTrackIndex.collectAsStateWithLifecycle()
 
+    LaunchedEffect(Unit) {
+        viewModel.initializeMediaController(context)
+        localTracks = viewModel.loadTrackList()
+        if (localTracks.isNotEmpty()) isSearched = true
+    }
+
     val storagePermissionState =
-//        rememberPermissionState(permission = Manifest.permission.READ_MEDIA_AUDIO)
-        rememberPermissionState(permission = Manifest.permission.READ_EXTERNAL_STORAGE)
+        rememberPermissionState(permission = Manifest.permission.READ_MEDIA_AUDIO)
+//        rememberPermissionState(permission = Manifest.permission.READ_EXTERNAL_STORAGE)
 
     fun searchLocalMusicFiles() {
-        localTracks = getLocalMusicFiles(context)
+        localTracks = getLocalMusicFiles(context, viewModel)
         isSearched = true
     }
 
@@ -230,7 +232,6 @@ fun PlaybackControls(
     val bgColor = MaterialTheme.colorScheme.surfaceContainer
     val iconNormalSize = 50.dp
     val iconBigSize = 130.dp
-
     var expanded = playerState.value == PlayerState.PlayingQueue
 
     Row(
@@ -254,10 +255,10 @@ fun PlaybackControls(
             onClick = { viewModel.playPrevious() },
             enabled = expanded
         ) {
-            Image(
+            Icon(
                 modifier = Modifier.fillMaxSize(),
                 painter = painterResource(R.drawable.previous_button),
-                contentDescription = "Previous",
+                contentDescription = "Next"
             )
         }
 
@@ -301,7 +302,7 @@ fun PlaybackControls(
     }
 }
 
-private fun getLocalMusicFiles(context: Context): List<Track> {
+private fun getLocalMusicFiles(context: Context, viewModel: MainViewModel): List<Track> {
     val trackList = mutableListOf<Track>()
     val projection = arrayOf(
         MediaStore.Audio.Media._ID,
@@ -332,6 +333,7 @@ private fun getLocalMusicFiles(context: Context): List<Track> {
             )
         }
     }
+    viewModel.saveTrackList(trackList)
     return trackList
 }
 

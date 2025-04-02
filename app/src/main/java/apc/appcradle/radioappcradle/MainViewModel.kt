@@ -2,6 +2,8 @@ package apc.appcradle.radioappcradle
 
 import android.content.ComponentName
 import android.content.Context
+import android.content.SharedPreferences
+import androidx.core.content.edit
 import androidx.lifecycle.ViewModel
 import androidx.media3.common.MediaItem
 import androidx.media3.common.MediaMetadata
@@ -9,15 +11,20 @@ import androidx.media3.common.MimeTypes
 import androidx.media3.common.Player
 import androidx.media3.session.MediaController
 import androidx.media3.session.SessionToken
+import apc.appcradle.radioappcradle.app.TRACKLIST_SAVE_KEY
 import apc.appcradle.radioappcradle.domain.PlayerState
 import apc.appcradle.radioappcradle.domain.Track
 import com.google.common.util.concurrent.ListenableFuture
 import com.google.common.util.concurrent.MoreExecutors
+import com.google.gson.Gson
+import com.google.gson.reflect.TypeToken
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 
-class MainViewModel() : ViewModel() {
+class MainViewModel(
+    private val sharedPrefs: SharedPreferences
+) : ViewModel() {
     private var playerQueuePrepared = false
 
     private val _playingTrackIndex = MutableStateFlow<Int?>(null)
@@ -37,7 +44,7 @@ class MainViewModel() : ViewModel() {
         mediaControllerFuture?.apply {
             addListener(Runnable {
                 controller = get()
-                updateUIWithMediaController(controller!!)
+                updateUIWithMediaController(controller)
             }, MoreExecutors.directExecutor())
         }
     }
@@ -170,5 +177,16 @@ class MainViewModel() : ViewModel() {
             }
 
         })
+    }
+
+    fun saveTrackList(trackList: List<Track>) {
+        val json = Gson().toJson(trackList)
+        sharedPrefs.edit { putString(TRACKLIST_SAVE_KEY, json) }
+    }
+
+    fun loadTrackList(): List<Track> {
+        val itemType = object : TypeToken<List<Track>>() {}.type
+        val json = sharedPrefs.getString(TRACKLIST_SAVE_KEY, null) ?: return emptyList()
+        return Gson().fromJson(json, itemType)
     }
 }
