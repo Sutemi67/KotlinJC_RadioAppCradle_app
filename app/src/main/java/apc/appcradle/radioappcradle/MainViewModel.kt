@@ -188,7 +188,7 @@ class MainViewModel(
     }
 
     suspend fun loadTrackList(): List<Track> = withContext(Dispatchers.IO) {
-//        delay(500L)
+        delay(1000L)
         val itemType = object : TypeToken<List<Track>>() {}.type
         val json = sharedPrefs.getString(TRACKLIST_SAVE_KEY, null) ?: return@withContext emptyList()
         Gson().fromJson(json, itemType)
