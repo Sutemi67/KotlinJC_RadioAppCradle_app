@@ -2,6 +2,7 @@ package apc.appcradle.radioappcradle.second_screen
 
 import android.Manifest
 import android.content.Context
+import android.os.Build
 import android.provider.MediaStore
 import android.util.Log
 import androidx.compose.animation.animateContentSize
@@ -28,6 +29,7 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
@@ -64,16 +66,24 @@ fun SecondScreen(
     val context = LocalContext.current
     var localTracks by remember { mutableStateOf<List<Track>>(emptyList()) }
     var isSearched by remember { mutableStateOf(false) }
+    var isLoading by remember { mutableStateOf(true) }
     var playingTrackIndex = viewModel.playingTrackIndex.collectAsStateWithLifecycle()
 
     LaunchedEffect(Unit) {
         viewModel.initializeMediaController(context)
         localTracks = viewModel.loadTrackList()
         if (localTracks.isNotEmpty()) isSearched = true
+        isLoading = false
     }
 
-    val storagePermissionState =
-        rememberPermissionState(permission = Manifest.permission.READ_MEDIA_AUDIO)
+    val permission = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+        Manifest.permission.READ_MEDIA_AUDIO
+    } else {
+        Manifest.permission.READ_EXTERNAL_STORAGE
+    }
+    val storagePermissionState = rememberPermissionState(permission = permission)
+//    val storagePermissionState =
+//        rememberPermissionState(permission = Manifest.permission.READ_MEDIA_AUDIO)
 //        rememberPermissionState(permission = Manifest.permission.READ_EXTERNAL_STORAGE)
 
     fun searchLocalMusicFiles() {
@@ -143,32 +153,36 @@ fun SecondScreen(
                     )
                 }
             } else {
-                if (localTracks.isEmpty()) {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .padding(innerPadding)
-                            .padding(horizontal = 10.dp),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Text(
-                            text = "Локальные треки не найдены.",
-                            style = Typography.labels
-                        )
-                    }
+                if (isLoading) {
+                    LinearProgressIndicator()
                 } else {
-                    LazyColumn(
-                        contentPadding = innerPadding,
-                        modifier = Modifier.fillMaxSize()
-                    ) {
-                        items(localTracks.size) { index ->
-                            TrackItem(
-                                track = localTracks[index],
-                                onClick = {
-                                    viewModel.playLocalFile(localTracks[index].data, index)
-                                },
-                                state = playingTrackIndex.value == index
+                    if (localTracks.isEmpty()) {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .padding(innerPadding)
+                                .padding(horizontal = 10.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                text = "Локальные треки не найдены.",
+                                style = Typography.labels
                             )
+                        }
+                    } else {
+                        LazyColumn(
+                            contentPadding = innerPadding,
+                            modifier = Modifier.fillMaxSize()
+                        ) {
+                            items(localTracks.size) { index ->
+                                TrackItem(
+                                    track = localTracks[index],
+                                    onClick = {
+                                        viewModel.playLocalFile(localTracks[index].data, index)
+                                    },
+                                    state = playingTrackIndex.value == index
+                                )
+                            }
                         }
                     }
                 }
