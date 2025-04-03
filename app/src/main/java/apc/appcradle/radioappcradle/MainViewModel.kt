@@ -3,6 +3,7 @@ package apc.appcradle.radioappcradle
 import android.content.ComponentName
 import android.content.Context
 import android.content.SharedPreferences
+import android.widget.Toast
 import androidx.core.content.edit
 import androidx.lifecycle.ViewModel
 import androidx.media3.common.MediaItem
@@ -29,38 +30,53 @@ class MainViewModel(
     private val sharedPrefs: SharedPreferences
 ) : ViewModel() {
     private var playerQueuePrepared = false
-
+    private var playingStreamUrl = ""
     private val _playingTrackIndex = MutableStateFlow<Int?>(null)
     val playingTrackIndex: StateFlow<Int?> = _playingTrackIndex.asStateFlow()
 
     private val _playingState = MutableStateFlow<PlayerState>(PlayerState.Stopped)
     val playingState: StateFlow<PlayerState> = _playingState.asStateFlow()
 
-    lateinit var controller: MediaController
     internal var mediaControllerFuture: ListenableFuture<MediaController>? = null
+    private var mediaController: MediaController? = null
 
     fun initializeMediaController(context: Context) {
-        val sessionToken =
-            SessionToken(context, ComponentName(context, PlaybackService::class.java))
+        val sessionToken = SessionToken(
+            context,
+            ComponentName(context, PlaybackService::class.java)
+        )
         mediaControllerFuture =
             MediaController.Builder(context, sessionToken).buildAsync()
-        mediaControllerFuture?.apply {
-            addListener(Runnable {
-                controller = get()
-                updateUIWithMediaController(controller)
-            }, MoreExecutors.directExecutor())
+        mediaControllerFuture?.addListener({
+            mediaController = mediaControllerFuture?.get()
+            updateUIWithMediaController(mediaController!!)
+        }, MoreExecutors.directExecutor())
+    }
+
+    private val playerListener = object : Player.Listener {
+        override fun onPlaybackStateChanged(state: Int) {
+            // Обновление UI состояния
         }
     }
 
+    internal fun releaseController() {
+        mediaController?.apply {
+            removeListener(playerListener)
+            release()
+            mediaController = null
+        }
+        mediaControllerFuture?.cancel(true)
+        mediaControllerFuture = null
+    }
 
     fun playLocalFile(filePath: String, index: Int) {
         if (playingState.value == PlayerState.PlayingSolo && playingTrackIndex.value == index) {
-            controller.pause()
+            mediaController?.pause()
             _playingState.value = PlayerState.PausedSolo
             _playingTrackIndex.value = null
         } else {
             if (playingTrackIndex.value == index) {
-                controller.play()
+                mediaController?.play()
                 _playingState.value = PlayerState.PlayingSolo
                 return
             }
@@ -70,84 +86,88 @@ class MainViewModel(
                 .setMediaId(uri)
                 .setMimeType(MimeTypes.AUDIO_MPEG)
                 .build()
-            controller.setMediaItem(mediaItem)
-            controller.prepare()
-            controller.play()
+            mediaController?.setMediaItem(mediaItem)
+            mediaController?.prepare()
+            mediaController?.play()
             _playingState.value = PlayerState.PlayingSolo
+            playerQueuePrepared = false
         }
     }
 
     fun playStream(url: String) {
-        when (playingState.value) {
-            PlayerState.PlayingStream -> {
-                controller.stop()
-                _playingState.value = PlayerState.Stopped
-            }
-
-            else -> {
-                val mediaItem = MediaItem.Builder()
-                    .setMediaId(url)
-                    .setMediaMetadata(
-                        MediaMetadata.Builder()
-                            .setTitle("Radio Player")
-                            .build()
-                    ).build()
-
-                controller.setMediaItem(mediaItem)
-                controller.prepare()
-                controller.play()
-                _playingState.value = PlayerState.PlayingStream
-                _playingTrackIndex.value = null
-            }
-        }
-    }
-
-    fun playTrackList(tracks: List<Track>) {
-        if (tracks.isEmpty()) return
-        if (playingState.value == PlayerState.PlayingQueue) {
-            controller.pause()
-            _playingState.value = PlayerState.PausedQueue
+        if (playingState.value == PlayerState.PlayingStream && playingStreamUrl == url) {
+            mediaController?.stop()
+            _playingState.value = PlayerState.Stopped
         } else {
-            if (!controller.isPlaying) {
-                if (playerQueuePrepared) {
-                    controller.play()
-                    _playingState.value = PlayerState.PlayingQueue
-                    _playingTrackIndex.value = null
-                    return
-                }
-            }
-            val mediaItems = tracks.map { track ->
-                MediaItem.Builder()
-                    .setMediaId("file://${track.data}")
-                    .setMimeType(MimeTypes.AUDIO_MPEG)
-                    .build()
-            }
-            controller.shuffleModeEnabled = true
-            controller.setMediaItems(mediaItems)
-            controller.repeatMode = Player.REPEAT_MODE_ALL
-            controller.prepare()
-            controller.play()
-            playerQueuePrepared = true
-            _playingState.value = PlayerState.PlayingQueue
+            val mediaItem = MediaItem.Builder()
+                .setMediaId(url)
+                .setMediaMetadata(
+                    MediaMetadata.Builder()
+                        .setTitle("Radio Player")
+                        .build()
+                ).build()
+            mediaController?.setMediaItem(mediaItem)
+            mediaController?.prepare()
+            mediaController?.play()
+            playerQueuePrepared = false
+            playingStreamUrl = url
+            _playingState.value = PlayerState.PlayingStream
             _playingTrackIndex.value = null
         }
     }
 
+
+    fun playTrackList(tracks: List<Track>, context: Context) {
+        if (tracks.isEmpty()) {
+            Toast.makeText(context, "В плейлисте нет треков", Toast.LENGTH_SHORT).show()
+            return
+        }
+        if (playingState.value == PlayerState.PlayingQueue) {
+            mediaController?.pause()
+            _playingState.value = PlayerState.PausedQueue
+//            Toast.makeText(context, "Пауза очереди", Toast.LENGTH_SHORT).show()
+        } else {
+            if (playerQueuePrepared) {
+                mediaController?.play()
+                _playingState.value = PlayerState.PlayingQueue
+                _playingTrackIndex.value = null
+//                Toast.makeText(context, "$mediaController", Toast.LENGTH_SHORT).show()
+                return
+            } else {
+                val mediaItems = tracks.map { track ->
+                    MediaItem.Builder()
+                        .setMediaId("file://${track.data}")
+                        .setMimeType(MimeTypes.AUDIO_MPEG)
+                        .build()
+                }
+                mediaController?.shuffleModeEnabled = true
+                mediaController?.setMediaItems(mediaItems)
+                mediaController?.repeatMode = Player.REPEAT_MODE_ALL
+                mediaController?.prepare()
+                mediaController?.play()
+                playerQueuePrepared = true
+                _playingState.value = PlayerState.PlayingQueue
+                _playingTrackIndex.value = null
+//                Toast.makeText(context, "$mediaController", Toast.LENGTH_SHORT).show()
+            }
+        }
+    }
+
     fun playNext() {
-        if (controller.hasNextMediaItem()) {
-            controller.seekToNext()
+        if (mediaController?.hasNextMediaItem() == true) {
+            mediaController?.seekToNext()
         }
     }
 
     fun playPrevious() {
-        if (controller.hasPreviousMediaItem()) {
-            controller.seekToPrevious()
+        if (mediaController?.hasPreviousMediaItem() == true) {
+            mediaController?.seekToPrevious()
         }
     }
 
     override fun onCleared() {
         super.onCleared()
-        mediaControllerFuture?.cancel(true)
+        releaseController()
     }
 
     private fun updateUIWithMediaController(controller: MediaController) {

@@ -46,7 +46,6 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import apc.appcradle.radioappcradle.MainViewModel
@@ -241,6 +240,7 @@ fun PlaybackControls(
     viewModel: MainViewModel,
     trackList: List<Track>
 ) {
+    val context = LocalContext.current
     val playerState = viewModel.playingState.collectAsStateWithLifecycle()
     val borderColor = MaterialTheme.colorScheme.surfaceContainerHighest
     val bgColor = MaterialTheme.colorScheme.surfaceContainer
@@ -284,7 +284,7 @@ fun PlaybackControls(
                 )
                 .fillMaxHeight()
                 .aspectRatio(1f),
-            onClick = { viewModel.playTrackList(trackList) },
+            onClick = { viewModel.playTrackList(trackList, context) },
         ) {
             Icon(
                 modifier = Modifier.fillMaxSize(),
@@ -349,28 +349,4 @@ private fun getLocalMusicFiles(context: Context, viewModel: MainViewModel): List
     }
     viewModel.saveTrackList(trackList)
     return trackList
-}
-
-@Preview(
-    uiMode = android.content.res.Configuration.UI_MODE_NIGHT_YES, showSystemUi = true,
-    showBackground = true, device = "id:Galaxy Nexus"
-)
-@Preview(
-    uiMode = android.content.res.Configuration.UI_MODE_NIGHT_NO or android.content.res.Configuration.UI_MODE_TYPE_NORMAL,
-    showSystemUi = true,
-    showBackground = true,
-    device = "id:Galaxy Nexus"
-)
-@Composable
-fun Dd() {
-    TrackItem(
-        state = false,
-        track = Track(
-            id = 12,
-            name = "system-of-a-down",
-            data = "",
-            duration = 32343
-        ),
-        onClick = {}
-    )
 }

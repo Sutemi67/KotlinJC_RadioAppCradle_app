@@ -199,13 +199,8 @@ class PlaybackService : MediaSessionService(), MediaSession.Callback {
         mediaSession
 
     override fun onDestroy() {
+        mediaSession?.release()
+        player.release()
         super.onDestroy()
-        mediaSession?.run {
-            release()
-            player.release()
-            mediaSession = null
-            playerInstance = null
-            mediaSessionInstance = null
-        }
     }
 }
