@@ -16,7 +16,7 @@ import apc.appcradle.radioappcradle.MainViewModel
 import apc.appcradle.radioappcradle.app.components.AppButton
 
 @Composable
-fun FirstScreen(
+fun ScreenRadioOnline(
     viewModel: MainViewModel
 ) {
     val context = LocalContext.current

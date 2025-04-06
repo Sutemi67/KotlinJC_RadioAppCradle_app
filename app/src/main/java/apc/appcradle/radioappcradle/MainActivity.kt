@@ -22,9 +22,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.core.view.WindowCompat
-import apc.appcradle.radioappcradle.first_screen.FirstScreen
-import apc.appcradle.radioappcradle.second_screen.SecondScreen
+import apc.appcradle.radioappcradle.first_screen.ScreenRadioOnline
+import apc.appcradle.radioappcradle.second_screen.ScreenLocalPlayer
 import apc.appcradle.radioappcradle.ui.theme.RadioAppCradleTheme
 import apc.appcradle.radioappcradle.ui.theme.Typography
 import kotlinx.coroutines.launch
@@ -79,8 +78,8 @@ fun MyApp() {
                 state = pagerState,
             ) { page ->
                 when (page) {
-                    0 -> FirstScreen(viewModel = viewModel)
-                    1 -> SecondScreen(viewModel = viewModel)
+                    0 -> ScreenRadioOnline(viewModel = viewModel)
+                    1 -> ScreenLocalPlayer(viewModel = viewModel)
                 }
             }
         }
