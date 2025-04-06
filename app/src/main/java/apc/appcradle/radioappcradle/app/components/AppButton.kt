@@ -1,6 +1,5 @@
 package apc.appcradle.radioappcradle.app.components
 
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.material3.Button
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -18,7 +17,8 @@ fun AppButton(
 ) {
     Button(
         onClick = { onClick() },
-        modifier = modifier
+        modifier = modifier,
+        enabled = isEnabled
     ) {
         Text(text = text, style = textStyle)
     }
