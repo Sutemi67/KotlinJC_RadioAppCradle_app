@@ -101,6 +101,7 @@ class MainViewModel(
             mediaController?.stop()
             _playingState.value = PlayerState.Stopped
         } else {
+            _playingState.value = PlayerState.Loading
             val mediaItem = MediaItem.Builder()
                 .setMediaId(url)
                 .setMediaMetadata(
