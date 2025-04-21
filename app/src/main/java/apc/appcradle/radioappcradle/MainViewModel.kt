@@ -29,8 +29,10 @@ import kotlinx.coroutines.withContext
 class MainViewModel(
     private val sharedPrefs: SharedPreferences
 ) : ViewModel() {
+
     private var playerQueuePrepared = false
     private var playingStreamUrl = ""
+
     private val _playingTrackIndex = MutableStateFlow<Int?>(null)
     val playingTrackIndex: StateFlow<Int?> = _playingTrackIndex.asStateFlow()
 
