@@ -35,12 +35,12 @@ fun PlaybackControls(
     viewModel: MainViewModel,
     trackList: List<Track>
 ) {
-    val playerState = viewModel.playingState.collectAsStateWithLifecycle()
+    val playerState = viewModel.uiState.collectAsStateWithLifecycle()
     val borderColor = MaterialTheme.colorScheme.surfaceContainerHighest
     val bgColor = MaterialTheme.colorScheme.surfaceContainer
     val iconNormalSize = 50.dp
     val iconBigSize = 130.dp
-    val expanded = playerState.value == PlaybackCurrentStatus.PlayingQueue
+    val expanded = playerState.value.playbackStatus == PlaybackCurrentStatus.PlayingQueue
     val context = LocalContext.current
     Row(
         modifier = Modifier
@@ -82,7 +82,7 @@ fun PlaybackControls(
         ) {
             Icon(
                 modifier = Modifier.fillMaxSize(),
-                painter = when (playerState.value) {
+                painter = when (playerState.value.playbackStatus) {
                     PlaybackCurrentStatus.PlayingQueue -> painterResource(R.drawable.pause)
                     else -> painterResource(R.drawable.play)
                 },

@@ -25,23 +25,18 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.withContext
 
 class MainViewModel(
     private val sharedPrefs: SharedPreferences
 ) : ViewModel() {
 
-    private var playerQueuePrepared = false
-    private var playingStreamUrl = ""
+//    private var playerQueuePrepared = false
+//    private var playingStreamUrl = ""
 
     private val _uiState = MutableStateFlow(PlayerUiState())
     val uiState: StateFlow<PlayerUiState> = _uiState.asStateFlow()
-
-    private val _playingTrackIndex = MutableStateFlow<Int?>(null)
-    val playingTrackIndex: StateFlow<Int?> = _playingTrackIndex.asStateFlow()
-
-    private val _playingState = MutableStateFlow(PlaybackCurrentStatus.Stopped)
-    val playingState: StateFlow<PlaybackCurrentStatus> = _playingState.asStateFlow()
 
     internal var mediaControllerFuture: ListenableFuture<MediaController>? = null
     private var mediaController: MediaController? = null
@@ -76,17 +71,22 @@ class MainViewModel(
     }
 
     fun playLocalFile(filePath: String, index: Int) {
-        if (playingState.value == PlaybackCurrentStatus.PlayingSolo && playingTrackIndex.value == index) {
+        if (uiState.value.playbackStatus == PlaybackCurrentStatus.PlayingSolo &&
+            uiState.value.playingTrackIndex == index
+        ) {
             mediaController?.pause()
-            _playingState.value = PlaybackCurrentStatus.PausedSolo
-            _playingTrackIndex.value = null
+            _uiState.update {
+                it.copy(
+                    playbackStatus = PlaybackCurrentStatus.PausedSolo,
+                    playingTrackIndex = null
+                )
+            }
         } else {
-            if (playingTrackIndex.value == index) {
+            if (uiState.value.playingTrackIndex == index) {
                 mediaController?.play()
-                _playingState.value = PlaybackCurrentStatus.PlayingSolo
+                _uiState.update { it.copy(playbackStatus = PlaybackCurrentStatus.PlayingSolo) }
                 return
             }
-            _playingTrackIndex.value = index
             val uri = "file://$filePath"
             val mediaItem = MediaItem.Builder()
                 .setMediaId(uri)
@@ -95,17 +95,28 @@ class MainViewModel(
             mediaController?.setMediaItem(mediaItem)
             mediaController?.prepare()
             mediaController?.play()
-            _playingState.value = PlaybackCurrentStatus.PlayingSolo
-            playerQueuePrepared = false
+            _uiState.update {
+                it.copy(
+                    playbackStatus = PlaybackCurrentStatus.PlayingSolo,
+                    playingTrackIndex = index,
+                    isPlayerQueuePrepared = false
+                )
+            }
         }
     }
 
     fun playStream(url: String) {
-        if (playingState.value == PlaybackCurrentStatus.PlayingStream && playingStreamUrl == url) {
+        if (uiState.value.playbackStatus == PlaybackCurrentStatus.PlayingStream &&
+            uiState.value.streamUrl == url
+        ) {
             mediaController?.stop()
-            _playingState.value = PlaybackCurrentStatus.Stopped
+            _uiState.update {
+                it.copy(
+                    playbackStatus = PlaybackCurrentStatus.Stopped,
+                    streamUrl = null
+                )
+            }
         } else {
-            _playingState.value = PlaybackCurrentStatus.Loading
             val mediaItem = MediaItem.Builder()
                 .setMediaId(url)
                 .setMediaMetadata(
@@ -116,10 +127,14 @@ class MainViewModel(
             mediaController?.setMediaItem(mediaItem)
             mediaController?.prepare()
             mediaController?.play()
-            playerQueuePrepared = false
-            playingStreamUrl = url
-            _playingState.value = PlaybackCurrentStatus.PlayingStream
-            _playingTrackIndex.value = null
+            _uiState.update {
+                it.copy(
+                    playbackStatus = PlaybackCurrentStatus.PlayingStream,
+                    playingTrackIndex = null,
+                    streamUrl = url,
+                    isPlayerQueuePrepared = false
+                )
+            }
         }
     }
 
@@ -129,16 +144,18 @@ class MainViewModel(
             Toast.makeText(context, "В плейлисте нет треков", Toast.LENGTH_SHORT).show()
             return
         }
-        if (playingState.value == PlaybackCurrentStatus.PlayingQueue) {
+        if (uiState.value.playbackStatus == PlaybackCurrentStatus.PlayingQueue) {
             mediaController?.pause()
-            _playingState.value = PlaybackCurrentStatus.PausedQueue
-//            Toast.makeText(context, "Пауза очереди", Toast.LENGTH_SHORT).show()
+            _uiState.update { it.copy(playbackStatus = PlaybackCurrentStatus.PausedQueue) }
         } else {
-            if (playerQueuePrepared) {
+            if (uiState.value.isPlayerQueuePrepared) {
                 mediaController?.play()
-                _playingState.value = PlaybackCurrentStatus.PlayingQueue
-                _playingTrackIndex.value = null
-//                Toast.makeText(context, "$mediaController", Toast.LENGTH_SHORT).show()
+                _uiState.update {
+                    it.copy(
+                        playbackStatus = PlaybackCurrentStatus.PlayingQueue,
+                        playingTrackIndex = null
+                    )
+                }
                 return
             } else {
                 val mediaItems = tracks.map { track ->
@@ -152,10 +169,13 @@ class MainViewModel(
                 mediaController?.repeatMode = Player.REPEAT_MODE_ALL
                 mediaController?.prepare()
                 mediaController?.play()
-                playerQueuePrepared = true
-                _playingState.value = PlaybackCurrentStatus.PlayingQueue
-                _playingTrackIndex.value = null
-//                Toast.makeText(context, "$mediaController", Toast.LENGTH_SHORT).show()
+                _uiState.update {
+                    it.copy(
+                        playbackStatus = PlaybackCurrentStatus.PlayingQueue,
+                        playingTrackIndex = null,
+                        isPlayerQueuePrepared = true,
+                    )
+                }
             }
         }
     }

@@ -53,7 +53,7 @@ fun ScreenLocalPlayer(
     var localTracks by remember { mutableStateOf<List<Track>>(emptyList()) }
     var isSearched by remember { mutableStateOf(false) }
     var isLoading by remember { mutableStateOf(true) }
-    var playingTrackIndex = viewModel.playingTrackIndex.collectAsStateWithLifecycle()
+    val playingTrackIndex = viewModel.uiState.collectAsStateWithLifecycle().value.playingTrackIndex
 
     LaunchedEffect(Unit) {
         viewModel.initializeMediaController(context)
@@ -167,7 +167,7 @@ fun ScreenLocalPlayer(
                                 onClick = {
                                     viewModel.playLocalFile(localTracks[index].data, index)
                                 },
-                                state = playingTrackIndex.value == index
+                                state = playingTrackIndex == index
                             )
                         }
                     }

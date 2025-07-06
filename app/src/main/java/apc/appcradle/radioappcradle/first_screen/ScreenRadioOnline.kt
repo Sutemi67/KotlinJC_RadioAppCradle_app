@@ -25,7 +25,7 @@ fun ScreenRadioOnline(
     repository: Repository = koinInject<Repository>()
 ) {
     val context = LocalContext.current
-    val playerState = viewModel.playingState.collectAsStateWithLifecycle().value
+    val playerState = viewModel.uiState.collectAsStateWithLifecycle().value
     var numberOfStation by remember { mutableIntStateOf(0) }
 
     LaunchedEffect(Unit) {
@@ -44,7 +44,7 @@ fun ScreenRadioOnline(
                     viewModel.playStream(repository.stationList[index].url)
                     numberOfStation = index
                 },
-                playingStatus = playerState,
+                playingStatus = playerState.playbackStatus,
                 isClicked = numberOfStation == index
             )
         }
