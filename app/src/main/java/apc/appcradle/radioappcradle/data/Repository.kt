@@ -10,8 +10,8 @@ class Repository(
 ) {
     private val _stationList by lazy {
         listOf(
-            RadioStation("rock", getString(context, R.string.radio_rock_url)),
-            RadioStation("lofi", getString(context, R.string.radio_lofi_url))
+            RadioStation("Rock", getString(context, R.string.radio_rock_url)),
+            RadioStation("Lofi", getString(context, R.string.radio_lofi_url))
         )
     }
 
