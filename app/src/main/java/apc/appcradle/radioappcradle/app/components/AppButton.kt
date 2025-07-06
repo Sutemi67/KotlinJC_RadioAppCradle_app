@@ -18,7 +18,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import apc.appcradle.radioappcradle.domain.PlayerState
+import apc.appcradle.radioappcradle.domain.PlaybackCurrentStatus
 import apc.appcradle.radioappcradle.ui.theme.Typography
 
 @Composable
@@ -27,11 +27,11 @@ fun AppButton(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
     isEnabled: Boolean = true,
-    playingStatus: PlayerState,
+    playingStatus: PlaybackCurrentStatus,
     isClicked: Boolean
 ) {
     val bgAnimate by animateColorAsState(
-        targetValue = if (playingStatus == PlayerState.PlayingStream && isClicked) MaterialTheme.colorScheme.primaryContainer else ButtonDefaults.filledTonalButtonColors().containerColor,
+        targetValue = if (playingStatus == PlaybackCurrentStatus.PlayingStream && isClicked) MaterialTheme.colorScheme.primaryContainer else ButtonDefaults.filledTonalButtonColors().containerColor,
         animationSpec = tween(durationMillis = 1500, easing = EaseOut),
     )
     FilledTonalButton(
@@ -49,7 +49,7 @@ fun AppButton(
             verticalArrangement = Arrangement.Center
         ) {
             Text(text = text, style = Typography.buttonsText)
-            if (playingStatus == PlayerState.Loading) LinearProgressIndicator()
+            if (playingStatus == PlaybackCurrentStatus.Loading) LinearProgressIndicator()
         }
     }
 }

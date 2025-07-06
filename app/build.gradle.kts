@@ -1,5 +1,3 @@
-import org.gradle.kotlin.dsl.implementation
-
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
@@ -9,7 +7,7 @@ plugins {
 
 android {
     namespace = "apc.appcradle.radioappcradle"
-    compileSdk = 35
+    compileSdk = 36
 
     defaultConfig {
         applicationId = "apc.appcradle.radioappcradle"
@@ -24,6 +22,7 @@ android {
     buildTypes {
         release {
             isMinifyEnabled = true
+            isShrinkResources = true
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
@@ -64,10 +63,10 @@ dependencies {
     debugImplementation(libs.androidx.ui.test.manifest)
 
     //Glide
-    implementation (libs.glide)
+    implementation(libs.glide)
 
-    implementation (libs.accompanist.permissions)
-    implementation (libs.accompanist.systemuicontroller)
+    implementation(libs.accompanist.permissions)
+    implementation(libs.accompanist.systemuicontroller)
 
     //Exo
     implementation(libs.androidx.media3.exoplayer)
@@ -76,10 +75,10 @@ dependencies {
     implementation(libs.androidx.media3.session)
 
     //Koin
-    implementation (libs.koin.androidx.compose)
+    implementation(libs.koin.androidx.compose)
 
     //Gson
-    implementation (libs.gson)
+    implementation(libs.gson)
 
     //Firebase
     implementation(platform(libs.firebase.bom))

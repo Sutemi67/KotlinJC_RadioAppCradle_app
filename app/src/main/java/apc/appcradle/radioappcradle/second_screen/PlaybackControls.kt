@@ -26,7 +26,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import apc.appcradle.radioappcradle.MainViewModel
 import apc.appcradle.radioappcradle.R
-import apc.appcradle.radioappcradle.domain.PlayerState
+import apc.appcradle.radioappcradle.domain.PlaybackCurrentStatus
 import apc.appcradle.radioappcradle.domain.Track
 
 
@@ -40,7 +40,7 @@ fun PlaybackControls(
     val bgColor = MaterialTheme.colorScheme.surfaceContainer
     val iconNormalSize = 50.dp
     val iconBigSize = 130.dp
-    val expanded = playerState.value == PlayerState.PlayingQueue
+    val expanded = playerState.value == PlaybackCurrentStatus.PlayingQueue
     val context = LocalContext.current
     Row(
         modifier = Modifier
@@ -83,7 +83,7 @@ fun PlaybackControls(
             Icon(
                 modifier = Modifier.fillMaxSize(),
                 painter = when (playerState.value) {
-                    PlayerState.PlayingQueue -> painterResource(R.drawable.pause)
+                    PlaybackCurrentStatus.PlayingQueue -> painterResource(R.drawable.pause)
                     else -> painterResource(R.drawable.play)
                 },
                 contentDescription = "Play/Pause"

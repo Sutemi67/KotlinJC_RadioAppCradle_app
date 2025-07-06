@@ -1,6 +1,6 @@
 package apc.appcradle.radioappcradle.domain
 
-enum class PlayerState {
+enum class PlaybackCurrentStatus {
     Loading,
     PlayingSolo,
     PlayingQueue,

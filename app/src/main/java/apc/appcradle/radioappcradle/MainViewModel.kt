@@ -13,7 +13,8 @@ import androidx.media3.common.Player
 import androidx.media3.session.MediaController
 import androidx.media3.session.SessionToken
 import apc.appcradle.radioappcradle.app.TRACKLIST_SAVE_KEY
-import apc.appcradle.radioappcradle.domain.PlayerState
+import apc.appcradle.radioappcradle.domain.PlaybackCurrentStatus
+import apc.appcradle.radioappcradle.domain.PlayerUiState
 import apc.appcradle.radioappcradle.domain.Track
 import com.google.common.util.concurrent.ListenableFuture
 import com.google.common.util.concurrent.MoreExecutors
@@ -33,11 +34,14 @@ class MainViewModel(
     private var playerQueuePrepared = false
     private var playingStreamUrl = ""
 
+    private val _uiState = MutableStateFlow(PlayerUiState())
+    val uiState: StateFlow<PlayerUiState> = _uiState.asStateFlow()
+
     private val _playingTrackIndex = MutableStateFlow<Int?>(null)
     val playingTrackIndex: StateFlow<Int?> = _playingTrackIndex.asStateFlow()
 
-    private val _playingState = MutableStateFlow(PlayerState.Stopped)
-    val playingState: StateFlow<PlayerState> = _playingState.asStateFlow()
+    private val _playingState = MutableStateFlow(PlaybackCurrentStatus.Stopped)
+    val playingState: StateFlow<PlaybackCurrentStatus> = _playingState.asStateFlow()
 
     internal var mediaControllerFuture: ListenableFuture<MediaController>? = null
     private var mediaController: MediaController? = null
@@ -72,14 +76,14 @@ class MainViewModel(
     }
 
     fun playLocalFile(filePath: String, index: Int) {
-        if (playingState.value == PlayerState.PlayingSolo && playingTrackIndex.value == index) {
+        if (playingState.value == PlaybackCurrentStatus.PlayingSolo && playingTrackIndex.value == index) {
             mediaController?.pause()
-            _playingState.value = PlayerState.PausedSolo
+            _playingState.value = PlaybackCurrentStatus.PausedSolo
             _playingTrackIndex.value = null
         } else {
             if (playingTrackIndex.value == index) {
                 mediaController?.play()
-                _playingState.value = PlayerState.PlayingSolo
+                _playingState.value = PlaybackCurrentStatus.PlayingSolo
                 return
             }
             _playingTrackIndex.value = index
@@ -91,17 +95,17 @@ class MainViewModel(
             mediaController?.setMediaItem(mediaItem)
             mediaController?.prepare()
             mediaController?.play()
-            _playingState.value = PlayerState.PlayingSolo
+            _playingState.value = PlaybackCurrentStatus.PlayingSolo
             playerQueuePrepared = false
         }
     }
 
     fun playStream(url: String) {
-        if (playingState.value == PlayerState.PlayingStream && playingStreamUrl == url) {
+        if (playingState.value == PlaybackCurrentStatus.PlayingStream && playingStreamUrl == url) {
             mediaController?.stop()
-            _playingState.value = PlayerState.Stopped
+            _playingState.value = PlaybackCurrentStatus.Stopped
         } else {
-            _playingState.value = PlayerState.Loading
+            _playingState.value = PlaybackCurrentStatus.Loading
             val mediaItem = MediaItem.Builder()
                 .setMediaId(url)
                 .setMediaMetadata(
@@ -114,7 +118,7 @@ class MainViewModel(
             mediaController?.play()
             playerQueuePrepared = false
             playingStreamUrl = url
-            _playingState.value = PlayerState.PlayingStream
+            _playingState.value = PlaybackCurrentStatus.PlayingStream
             _playingTrackIndex.value = null
         }
     }
@@ -125,14 +129,14 @@ class MainViewModel(
             Toast.makeText(context, "В плейлисте нет треков", Toast.LENGTH_SHORT).show()
             return
         }
-        if (playingState.value == PlayerState.PlayingQueue) {
+        if (playingState.value == PlaybackCurrentStatus.PlayingQueue) {
             mediaController?.pause()
-            _playingState.value = PlayerState.PausedQueue
+            _playingState.value = PlaybackCurrentStatus.PausedQueue
 //            Toast.makeText(context, "Пауза очереди", Toast.LENGTH_SHORT).show()
         } else {
             if (playerQueuePrepared) {
                 mediaController?.play()
-                _playingState.value = PlayerState.PlayingQueue
+                _playingState.value = PlaybackCurrentStatus.PlayingQueue
                 _playingTrackIndex.value = null
 //                Toast.makeText(context, "$mediaController", Toast.LENGTH_SHORT).show()
                 return
@@ -149,7 +153,7 @@ class MainViewModel(
                 mediaController?.prepare()
                 mediaController?.play()
                 playerQueuePrepared = true
-                _playingState.value = PlayerState.PlayingQueue
+                _playingState.value = PlaybackCurrentStatus.PlayingQueue
                 _playingTrackIndex.value = null
 //                Toast.makeText(context, "$mediaController", Toast.LENGTH_SHORT).show()
             }

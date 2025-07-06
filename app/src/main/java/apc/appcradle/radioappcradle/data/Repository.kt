@@ -8,8 +8,12 @@ import apc.appcradle.radioappcradle.domain.RadioStation
 class Repository(
     context: Context
 ) {
-    val stationList = listOf<RadioStation>(
-        RadioStation("rock", getString(context, R.string.radio_rock_url)),
-        RadioStation("lofi", getString(context, R.string.radio_lofi_url))
-    )
+    private val _stationList by lazy {
+        listOf(
+            RadioStation("rock", getString(context, R.string.radio_rock_url)),
+            RadioStation("lofi", getString(context, R.string.radio_lofi_url))
+        )
+    }
+
+    val stationList: List<RadioStation> get() = _stationList
 }

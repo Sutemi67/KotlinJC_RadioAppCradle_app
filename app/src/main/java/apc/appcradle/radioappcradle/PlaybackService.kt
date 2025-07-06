@@ -8,6 +8,7 @@ import android.media.AudioFocusRequest
 import android.media.AudioManager
 import android.os.Build
 import android.os.Bundle
+import androidx.annotation.RequiresApi
 import androidx.media3.common.MediaItem
 import androidx.media3.common.Player
 import androidx.media3.common.util.UnstableApi
@@ -21,17 +22,13 @@ import com.google.common.util.concurrent.ListenableFuture
 
 class PlaybackService : MediaSessionService(), MediaSession.Callback {
 
-    companion object {
-        private var playerInstance: Player? = null
-        private var mediaSessionInstance: MediaSession? = null
-    }
-
-    private lateinit var player: Player
+    //    private var playerInstance: Player? = null
+    private var mediaSessionInstance: MediaSession? = null
+    private var player: Player? = null
     private var mediaSession: MediaSession? = null
     private var currentSongPosition: Long = 0L
     private var isPauseFromLoss = false
 
-    // for audio focus request
     private var audioManager: AudioManager? = null
     private var audioFocusState: Int = AudioManager.AUDIOFOCUS_REQUEST_GRANTED
     private var focusRequest: AudioFocusRequest? = null
@@ -83,31 +80,30 @@ class PlaybackService : MediaSessionService(), MediaSession.Callback {
         when (state) {
             AudioManager.AUDIOFOCUS_GAIN -> {
                 if (isPauseFromLoss) {
-                    player.play()
+                    player?.play()
                     isPauseFromLoss = false
                 }
             }
 
             AudioManager.AUDIOFOCUS_LOSS_TRANSIENT -> {
-                if (player.isPlaying) {
-                    player.pause()
+                if (player?.isPlaying == true) {
+                    player?.pause()
                     isPauseFromLoss = true
                 }
             }
 
             AudioManager.AUDIOFOCUS_LOSS -> {
-                if (player.isPlaying) {
-                    player.pause()
+                if (player?.isPlaying == true) {
+                    player?.pause()
                 }
             }
         }
     }
 
     private fun initializeSessionAndPlayer() {
-        if (playerInstance == null) {
-            playerInstance = ExoPlayer.Builder(this).build().also { it.addListener(playerListener) }
+        if (player == null) {
+            player = ExoPlayer.Builder(this).build().also { it.addListener(playerListener) }
         }
-        player = playerInstance!!
         val intent = Intent(this, MainActivity::class.java).apply {
             flags = Intent.FLAG_ACTIVITY_SINGLE_TOP or Intent.FLAG_ACTIVITY_CLEAR_TOP
         }
@@ -118,7 +114,7 @@ class PlaybackService : MediaSessionService(), MediaSession.Callback {
             PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
         )
         if (mediaSessionInstance == null) {
-            mediaSessionInstance = MediaSession.Builder(this, player)
+            mediaSessionInstance = MediaSession.Builder(this, player!!)
                 .setCallback(this)
                 .setSessionActivity(pendingIntent)
                 .build()
@@ -161,7 +157,7 @@ class PlaybackService : MediaSessionService(), MediaSession.Callback {
         super.onPostConnect(session, controller)
         if (notificationPlayerCustomCommandButtons.isNotEmpty()) {
             mediaSession?.setCustomLayout(notificationPlayerCustomCommandButtons)
-            if (player.playWhenReady)
+            if (player?.playWhenReady == true)
                 setupAndRequestAudioFocus()
         }
     }
@@ -174,7 +170,7 @@ class PlaybackService : MediaSessionService(), MediaSession.Callback {
     ): ListenableFuture<SessionResult> {
         currentSongPosition = session.player.currentPosition
 
-        if (player.playWhenReady)
+        if (player?.playWhenReady == true)
             setupAndRequestAudioFocus()
 
 //        if (customCommand.customAction == Enums.Companion.NotificationPlayerCustomCommandButton.REWIND.customAction) {
@@ -198,9 +194,24 @@ class PlaybackService : MediaSessionService(), MediaSession.Callback {
     override fun onGetSession(controllerInfo: MediaSession.ControllerInfo): MediaSession? =
         mediaSession
 
+    @RequiresApi(Build.VERSION_CODES.O)
     override fun onDestroy() {
+        focusRequest?.let { request ->
+            audioManager?.abandonAudioFocusRequest(request)
+        } ?: run {
+            audioManager?.abandonAudioFocus(focusChangeListener)
+        }
+
+        player?.removeListener(playerListener)
+        player?.release()
+        player = null
+
         mediaSession?.release()
-        player.release()
+        mediaSession = null
+
+        audioManager = null
+        focusRequest = null
+
         super.onDestroy()
     }
 }
