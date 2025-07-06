@@ -81,7 +81,7 @@ fun ScreenLocalPlayer(
                     if (localTracks.isEmpty()) {
                         Column {
                             Text("Local Music", style = Typography.h2)
-                            if (isLoading) LinearProgressIndicator(Modifier.height(1.dp))
+                            if (isLoading) LinearProgressIndicator()
                         }
                     } else {
                         Text("Local Music: ${localTracks.size} tracks", style = Typography.h2)

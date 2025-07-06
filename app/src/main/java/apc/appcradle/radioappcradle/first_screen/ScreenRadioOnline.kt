@@ -3,7 +3,6 @@ package apc.appcradle.radioappcradle.first_screen
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
@@ -47,13 +46,9 @@ fun ScreenRadioOnline(
                 modifier = Modifier.height(30.dp),
                 title = {
                     if (playerState.isLoading) {
-                        Column(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(end = 15.dp)
-                        ) {
+                        Column {
                             Text("Загрузка...", style = Typography.h2)
-                            LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
+                            LinearProgressIndicator()
                         }
                     }
                 }
