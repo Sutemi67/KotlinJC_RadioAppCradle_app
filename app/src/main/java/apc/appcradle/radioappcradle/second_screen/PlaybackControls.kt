@@ -40,7 +40,7 @@ fun PlaybackControls(
     val bgColor = MaterialTheme.colorScheme.surfaceContainer
     val iconNormalSize = 50.dp
     val iconBigSize = 130.dp
-    var expanded = playerState.value == PlayerState.PlayingQueue
+    val expanded = playerState.value == PlayerState.PlayingQueue
     val context = LocalContext.current
     Row(
         modifier = Modifier

@@ -1,11 +1,9 @@
 package apc.appcradle.radioappcradle.first_screen
 
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -33,30 +31,22 @@ fun ScreenRadioOnline(
     LaunchedEffect(Unit) {
         viewModel.initializeMediaController(context)
     }
-    Column(
+    LazyColumn(
         modifier = Modifier
             .fillMaxSize()
             .padding(16.dp),
         verticalArrangement = Arrangement.Center
     ) {
-        AppButton(
-            text = "Rock",
-            onClick = {
-                viewModel.playStream(repository.stationList[0].url)
-                numberOfStation = 0
-            },
-            playingStatus = playerState,
-            isClicked = numberOfStation == 0
-        )
-        Spacer(modifier = Modifier.height(16.dp))
-        AppButton(
-            text = "Lo-Fi",
-            onClick = {
-                viewModel.playStream(repository.stationList[1].url)
-                numberOfStation = 1
-            },
-            playingStatus = playerState,
-            isClicked = numberOfStation == 1
-        )
+        items(repository.stationList.size) { index ->
+            AppButton(
+                text = repository.stationList[index].name,
+                onClick = {
+                    viewModel.playStream(repository.stationList[index].url)
+                    numberOfStation = index
+                },
+                playingStatus = playerState,
+                isClicked = numberOfStation == index
+            )
+        }
     }
 }

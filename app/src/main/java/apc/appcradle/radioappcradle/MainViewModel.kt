@@ -36,7 +36,7 @@ class MainViewModel(
     private val _playingTrackIndex = MutableStateFlow<Int?>(null)
     val playingTrackIndex: StateFlow<Int?> = _playingTrackIndex.asStateFlow()
 
-    private val _playingState = MutableStateFlow<PlayerState>(PlayerState.Stopped)
+    private val _playingState = MutableStateFlow(PlayerState.Stopped)
     val playingState: StateFlow<PlayerState> = _playingState.asStateFlow()
 
     internal var mediaControllerFuture: ListenableFuture<MediaController>? = null
