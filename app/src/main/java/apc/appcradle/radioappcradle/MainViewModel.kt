@@ -32,9 +32,6 @@ class MainViewModel(
     private val sharedPrefs: SharedPreferences
 ) : ViewModel() {
 
-//    private var playerQueuePrepared = false
-//    private var playingStreamUrl = ""
-
     private val _uiState = MutableStateFlow(PlayerUiState())
     val uiState: StateFlow<PlayerUiState> = _uiState.asStateFlow()
 
@@ -43,11 +40,9 @@ class MainViewModel(
 
     fun initializeMediaController(context: Context) {
         val sessionToken = SessionToken(
-            context,
-            ComponentName(context, PlaybackService::class.java)
+            context, ComponentName(context, PlaybackService::class.java)
         )
-        mediaControllerFuture =
-            MediaController.Builder(context, sessionToken).buildAsync()
+        mediaControllerFuture = MediaController.Builder(context, sessionToken).buildAsync()
         mediaControllerFuture?.addListener({
             mediaController = mediaControllerFuture?.get()
             updateUIWithMediaController(mediaController!!)
@@ -71,14 +66,11 @@ class MainViewModel(
     }
 
     fun playLocalFile(filePath: String, index: Int) {
-        if (uiState.value.playbackStatus == PlaybackCurrentStatus.PlayingSolo &&
-            uiState.value.playingTrackIndex == index
-        ) {
+        if (uiState.value.playbackStatus == PlaybackCurrentStatus.PlayingSolo && uiState.value.playingTrackIndex == index) {
             mediaController?.pause()
             _uiState.update {
                 it.copy(
-                    playbackStatus = PlaybackCurrentStatus.PausedSolo,
-                    playingTrackIndex = null
+                    playbackStatus = PlaybackCurrentStatus.PausedSolo, playingTrackIndex = null
                 )
             }
         } else {
@@ -88,10 +80,8 @@ class MainViewModel(
                 return
             }
             val uri = "file://$filePath"
-            val mediaItem = MediaItem.Builder()
-                .setMediaId(uri)
-                .setMimeType(MimeTypes.AUDIO_MPEG)
-                .build()
+            val mediaItem =
+                MediaItem.Builder().setMediaId(uri).setMimeType(MimeTypes.AUDIO_MPEG).build()
             mediaController?.setMediaItem(mediaItem)
             mediaController?.prepare()
             mediaController?.play()
@@ -106,24 +96,18 @@ class MainViewModel(
     }
 
     fun playStream(url: String) {
-        if (uiState.value.playbackStatus == PlaybackCurrentStatus.PlayingStream &&
-            uiState.value.streamUrl == url
-        ) {
+        if (uiState.value.playbackStatus == PlaybackCurrentStatus.PlayingStream && uiState.value.streamUrl == url) {
             mediaController?.stop()
             _uiState.update {
                 it.copy(
                     playbackStatus = PlaybackCurrentStatus.Stopped,
-                    streamUrl = null
+                    streamUrl = null,
                 )
             }
         } else {
-            val mediaItem = MediaItem.Builder()
-                .setMediaId(url)
-                .setMediaMetadata(
-                    MediaMetadata.Builder()
-                        .setTitle("Radio Player")
-                        .build()
-                ).build()
+            val mediaItem = MediaItem.Builder().setMediaId(url).setMediaMetadata(
+                MediaMetadata.Builder().setTitle("Radio Player").build()
+            ).build()
             mediaController?.setMediaItem(mediaItem)
             mediaController?.prepare()
             mediaController?.play()
@@ -132,7 +116,7 @@ class MainViewModel(
                     playbackStatus = PlaybackCurrentStatus.PlayingStream,
                     playingTrackIndex = null,
                     streamUrl = url,
-                    isPlayerQueuePrepared = false
+                    isPlayerQueuePrepared = false,
                 )
             }
         }
@@ -159,10 +143,8 @@ class MainViewModel(
                 return
             } else {
                 val mediaItems = tracks.map { track ->
-                    MediaItem.Builder()
-                        .setMediaId("file://${track.data}")
-                        .setMimeType(MimeTypes.AUDIO_MPEG)
-                        .build()
+                    MediaItem.Builder().setMediaId("file://${track.data}")
+                        .setMimeType(MimeTypes.AUDIO_MPEG).build()
                 }
                 mediaController?.shuffleModeEnabled = true
                 mediaController?.setMediaItems(mediaItems)
@@ -208,9 +190,11 @@ class MainViewModel(
             override fun onPlaybackStateChanged(playbackState: Int) {
                 when (playbackState) {
                     Player.STATE_BUFFERING -> {
+                        _uiState.update { it.copy(isLoading = true) }
                     }
 
                     Player.STATE_READY -> {
+                        _uiState.update { it.copy(isLoading = false) }
                     }
 
                     Player.STATE_ENDED -> {
@@ -218,6 +202,7 @@ class MainViewModel(
                     }
 
                     Player.STATE_IDLE -> {
+                        _uiState.update { it.copy(isLoading = false) }
                     }
                 }
             }
