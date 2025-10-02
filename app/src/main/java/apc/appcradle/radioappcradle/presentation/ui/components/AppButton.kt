@@ -1,4 +1,4 @@
-package apc.appcradle.radioappcradle.app.components
+package apc.appcradle.radioappcradle.presentation.ui.components
 
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.EaseOut
@@ -15,7 +15,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import apc.appcradle.radioappcradle.domain.PlaybackCurrentStatus
-import apc.appcradle.radioappcradle.ui.theme.Typography
+import apc.appcradle.radioappcradle.presentation.ui.theme.Typography
 
 @Composable
 fun AppButton(

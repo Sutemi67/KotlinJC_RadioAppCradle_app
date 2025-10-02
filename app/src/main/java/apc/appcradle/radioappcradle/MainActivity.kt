@@ -22,10 +22,11 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import apc.appcradle.radioappcradle.first_screen.ScreenRadioOnline
-import apc.appcradle.radioappcradle.second_screen.ScreenLocalPlayer
-import apc.appcradle.radioappcradle.ui.theme.RadioAppCradleTheme
-import apc.appcradle.radioappcradle.ui.theme.Typography
+import apc.appcradle.radioappcradle.presentation.MainViewModel
+import apc.appcradle.radioappcradle.presentation.ui.first_screen.ScreenRadioOnline
+import apc.appcradle.radioappcradle.presentation.ui.second_screen.ScreenLocalPlayer
+import apc.appcradle.radioappcradle.presentation.ui.theme.RadioAppCradleTheme
+import apc.appcradle.radioappcradle.presentation.ui.theme.Typography
 import kotlinx.coroutines.launch
 import org.koin.androidx.compose.koinViewModel
 

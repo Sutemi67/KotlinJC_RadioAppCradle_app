@@ -1,10 +1,9 @@
-package apc.appcradle.radioappcradle.app
+package apc.appcradle.radioappcradle
 
 import android.content.Context.MODE_PRIVATE
 import android.content.SharedPreferences
-import apc.appcradle.radioappcradle.MainViewModel
-import apc.appcradle.radioappcradle.PlaybackService
 import apc.appcradle.radioappcradle.data.Repository
+import apc.appcradle.radioappcradle.presentation.MainViewModel
 import org.koin.android.ext.koin.androidContext
 import org.koin.core.module.dsl.viewModel
 import org.koin.dsl.module

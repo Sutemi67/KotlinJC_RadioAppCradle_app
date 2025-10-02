@@ -1,4 +1,4 @@
-package apc.appcradle.radioappcradle.first_screen
+package apc.appcradle.radioappcradle.presentation.ui.first_screen
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -21,10 +21,10 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
-import apc.appcradle.radioappcradle.MainViewModel
-import apc.appcradle.radioappcradle.app.components.AppButton
+import apc.appcradle.radioappcradle.presentation.MainViewModel
+import apc.appcradle.radioappcradle.presentation.ui.components.AppButton
 import apc.appcradle.radioappcradle.data.Repository
-import apc.appcradle.radioappcradle.ui.theme.Typography
+import apc.appcradle.radioappcradle.presentation.ui.theme.Typography
 import org.koin.compose.koinInject
 
 @OptIn(ExperimentalMaterial3Api::class)

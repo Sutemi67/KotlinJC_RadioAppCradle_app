@@ -1,4 +1,4 @@
-package apc.appcradle.radioappcradle.second_screen
+package apc.appcradle.radioappcradle.presentation.ui.second_screen
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -19,7 +19,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import apc.appcradle.radioappcradle.R
 import apc.appcradle.radioappcradle.domain.Track
-import apc.appcradle.radioappcradle.ui.theme.Typography
+import apc.appcradle.radioappcradle.presentation.ui.theme.Typography
 
 
 @Composable

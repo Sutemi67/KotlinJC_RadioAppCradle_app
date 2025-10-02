@@ -1,4 +1,4 @@
-package apc.appcradle.radioappcradle.second_screen
+package apc.appcradle.radioappcradle.presentation.ui.second_screen
 
 import android.Manifest
 import android.content.Context
@@ -36,10 +36,10 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import apc.appcradle.radioappcradle.MainViewModel
+import apc.appcradle.radioappcradle.presentation.MainViewModel
 import apc.appcradle.radioappcradle.R
 import apc.appcradle.radioappcradle.domain.Track
-import apc.appcradle.radioappcradle.ui.theme.Typography
+import apc.appcradle.radioappcradle.presentation.ui.theme.Typography
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.google.accompanist.permissions.isGranted
 import com.google.accompanist.permissions.rememberPermissionState

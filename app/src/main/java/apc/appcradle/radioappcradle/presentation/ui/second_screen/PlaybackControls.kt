@@ -1,4 +1,4 @@
-package apc.appcradle.radioappcradle.second_screen
+package apc.appcradle.radioappcradle.presentation.ui.second_screen
 
 import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.EaseIn
@@ -24,7 +24,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import apc.appcradle.radioappcradle.MainViewModel
+import apc.appcradle.radioappcradle.presentation.MainViewModel
 import apc.appcradle.radioappcradle.R
 import apc.appcradle.radioappcradle.domain.PlaybackCurrentStatus
 import apc.appcradle.radioappcradle.domain.Track
