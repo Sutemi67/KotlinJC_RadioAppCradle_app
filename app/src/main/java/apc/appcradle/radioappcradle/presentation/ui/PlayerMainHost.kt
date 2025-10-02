@@ -26,7 +26,14 @@ fun PlayerMainHost() {
     val context = LocalContext.current
     Scaffold(
         topBar = {
-            TopAppBar(title = { Text(text = "AppCradle Audio player", style = Typography.h1) })
+            TopAppBar(
+                title = {
+                    Text(
+                        text = "AppCradle Audio player",
+                        style = Typography.h1
+                    )
+                },
+            )
         }
     ) { paddingValues ->
         Box(Modifier.padding(paddingValues)) {

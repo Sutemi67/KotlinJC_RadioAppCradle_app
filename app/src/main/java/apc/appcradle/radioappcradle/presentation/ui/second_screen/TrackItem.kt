@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Card
+import androidx.compose.material3.ElevatedCard
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -27,7 +28,7 @@ fun TrackItem(
     track: Track,
     onClick: () -> Unit
 ) {
-    Card(
+    ElevatedCard(
         modifier = Modifier
             .height(60.dp)
             .clickable(onClick = onClick)
@@ -37,7 +38,8 @@ fun TrackItem(
             modifier = Modifier
                 .background(
                     if (state)
-                        MaterialTheme.colorScheme.surfaceContainerHighest
+                        MaterialTheme.colorScheme.primary.copy(alpha = 0.3f)
+//                        MaterialTheme.colorScheme.surfaceContainerHighest
                     else
                         MaterialTheme.colorScheme.surfaceContainer
                 )

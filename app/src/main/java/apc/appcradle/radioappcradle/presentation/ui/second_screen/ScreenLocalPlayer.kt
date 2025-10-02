@@ -2,9 +2,9 @@ package apc.appcradle.radioappcradle.presentation.ui.second_screen
 
 import android.Manifest
 import android.content.Context
+import android.net.Uri
 import android.os.Build
 import android.provider.MediaStore
-import android.util.Log
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.animateDpAsState
@@ -23,10 +23,10 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
@@ -40,17 +40,21 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.core.net.toUri
 import apc.appcradle.radioappcradle.R
 import apc.appcradle.radioappcradle.domain.PlaybackCurrentStatus
 import apc.appcradle.radioappcradle.domain.PlayerUiState
 import apc.appcradle.radioappcradle.domain.Track
 import apc.appcradle.radioappcradle.presentation.ui.theme.RadioAppCradleTheme
 import apc.appcradle.radioappcradle.presentation.ui.theme.Typography
+import coil3.compose.AsyncImage
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.google.accompanist.permissions.isGranted
 import com.google.accompanist.permissions.rememberPermissionState
@@ -65,18 +69,21 @@ fun ScreenLocalPlayer(
     playPrevious: () -> Unit,
     playTracklist: (List<Track>) -> Unit
 ) {
-    val animationDuration = 2000
+    val animationDuration = 1000
     val context = LocalContext.current
     val activeColor = MaterialTheme.colorScheme.primary
-    val inactiveColor = MaterialTheme.colorScheme.primaryContainer
+    val inactiveColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.4f)
+    var currentTrack: Track? by remember { mutableStateOf(null) }
 
     var localTracks by remember { mutableStateOf(getLocalMusicFiles(context)) }
+    var filteredList by remember { mutableStateOf(localTracks) }
     var isLoading by remember { mutableStateOf(true) }
     var boxSize by remember { mutableStateOf(0.dp) }
-    var isSearch by remember { mutableStateOf(false) }
+    var isFilterActive by remember { mutableStateOf(false) }
     var filterText by remember { mutableStateOf("") }
     var searchButtonColor by remember { mutableStateOf(inactiveColor) }
     var refreshButtonColor by remember { mutableStateOf(inactiveColor) }
+    var albumArtUri: Uri? by remember { mutableStateOf(null) }
 
     val animateSearchColor = animateColorAsState(
         targetValue = searchButtonColor,
@@ -91,10 +98,21 @@ fun ScreenLocalPlayer(
             targetValue = boxSize,
             animationSpec = tween(durationMillis = animationDuration)
         )
-
-    LaunchedEffect(isSearch, isLoading) {
-        searchButtonColor = if (isSearch) activeColor else inactiveColor
+    LaunchedEffect(currentTrack) {
+        albumArtUri =
+            "content://media/external/audio/albumart".toUri().buildUpon()
+                .appendPath(currentTrack?.albumId.toString())
+                .build()
+    }
+    LaunchedEffect(filterText) {
+        filteredList = localTracks.filter {
+            it.name.trim().lowercase().contains(filterText, ignoreCase = true)
+        }
+    }
+    LaunchedEffect(isFilterActive, isLoading) {
+        searchButtonColor = if (isFilterActive) activeColor else inactiveColor
         refreshButtonColor = if (isLoading) activeColor else inactiveColor
+        if (!isFilterActive) filterText = ""
     }
 
     LaunchedEffect(Unit) {
@@ -104,7 +122,7 @@ fun ScreenLocalPlayer(
 
     LaunchedEffect(state.value.playbackStatus) {
         boxSize = when (state.value.playbackStatus) {
-            PlaybackCurrentStatus.PlayingSolo, PlaybackCurrentStatus.PlayingQueue -> 200.dp
+            PlaybackCurrentStatus.PlayingSolo -> 200.dp
             else -> 0.dp
         }
     }
@@ -118,12 +136,13 @@ fun ScreenLocalPlayer(
 
     Scaffold(
         bottomBar = {
-            PlaybackControls(
-                uiState = state,
-                playNext = playNext,
-                playPrevious = playPrevious,
-                playTracklist = { playTracklist(localTracks) }
-            )
+            if (localTracks.isNotEmpty())
+                PlaybackControls(
+                    uiState = state,
+                    playNext = playNext,
+                    playPrevious = playPrevious,
+                    playTracklist = { playTracklist(localTracks) }
+                )
         }
     ) { innerPadding ->
         if (!storagePermissionState.status.isGranted) {
@@ -141,105 +160,107 @@ fun ScreenLocalPlayer(
                 }
             }
         } else {
-            if (localTracks.isEmpty()) {
-                Box(
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(innerPadding),
+            ) {
+                Row(
                     modifier = Modifier
-                        .fillMaxSize()
-                        .padding(innerPadding)
-                        .padding(horizontal = 10.dp),
-                    contentAlignment = Alignment.Center
+                        .fillMaxWidth()
+                        .padding(horizontal = 20.dp),
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
                     Text(
-                        text = stringResource(R.string.tracks_not_found),
-                        style = Typography.labels
+                        modifier = Modifier.weight(1f),
+                        text = "Local Music: ${localTracks.size} tracks",
+                        style = Typography.h2
+                    )
+                    IconButton(
+                        onClick = {
+                            if (storagePermissionState.status.isGranted) {
+                                localTracks = getLocalMusicFiles(context)
+                            } else {
+                                storagePermissionState.launchPermissionRequest()
+                            }
+                        }) {
+                        Icon(
+                            painter = painterResource(R.drawable.refresh),
+                            contentDescription = "Refresh files",
+                            tint = animateRefreshColor.value
+                        )
+                    }
+                    IconButton(
+                        onClick = { isFilterActive = !isFilterActive }) {
+                        Icon(
+                            painter = painterResource(R.drawable.baseline_search_24),
+                            contentDescription = "search",
+                            tint = animateSearchColor.value
+                        )
+                    }
+                }
+                AnimatedVisibility(
+                    visible = isFilterActive,
+                    enter = fadeIn(animationSpec = tween(durationMillis = animationDuration)) + expandVertically(
+                        animationSpec = tween(durationMillis = animationDuration)
+                    ),
+                    exit = fadeOut(animationSpec = tween(durationMillis = animationDuration)) + shrinkVertically(
+                        animationSpec = tween(durationMillis = animationDuration)
+                    ),
+                ) {
+                    OutlinedTextField(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 20.dp, vertical = 5.dp),
+                        value = filterText,
+                        onValueChange = { filterText = it }
                     )
                 }
-            } else {
-                Column {
-                    if (localTracks.isEmpty()) {
-                        Column {
-                            Text("Local Music", style = Typography.h2)
-                            if (isLoading) LinearProgressIndicator()
-                        }
-                    } else {
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(horizontal = 20.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Text(
-                                modifier = Modifier.weight(1f),
-                                text = "Local Music: ${localTracks.size} tracks",
-                                style = Typography.h2
-                            )
-                            IconButton(
-                                onClick = {
-                                    if (storagePermissionState.status.isGranted) {
-                                        localTracks = getLocalMusicFiles(context)
-                                    } else {
-                                        storagePermissionState.launchPermissionRequest()
-                                    }
-                                }) {
-                                Icon(
-                                    painter = painterResource(R.drawable.refresh),
-                                    contentDescription = "Refresh files",
-                                    tint = animateRefreshColor.value
-                                )
-                            }
-                            IconButton(
-                                onClick = { isSearch = !isSearch }) {
-                                Icon(
-                                    painter = painterResource(R.drawable.baseline_search_24),
-                                    contentDescription = "search",
-                                    tint = animateSearchColor.value
-                                )
-                            }
-                        }
-                        AnimatedVisibility(
-                            visible = isSearch,
-                            enter = fadeIn(animationSpec = tween(durationMillis = animationDuration)) + expandVertically(
-                                animationSpec = tween(durationMillis = animationDuration)
-                            ),
-                            exit = fadeOut(animationSpec = tween(durationMillis = animationDuration)) + shrinkVertically(
-                                animationSpec = tween(durationMillis = animationDuration)
-                            ),
-                        ) {
-                            OutlinedTextField(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(horizontal = 20.dp, vertical = 5.dp),
-                                value = filterText,
-                                onValueChange = { filterText = it }
-                            )
-                        }
-
-                        Icon(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .height(animatedBoxSize.value),
-                            painter = painterResource(R.drawable.play_arrow),
-                            contentDescription = null
+                if (localTracks.isEmpty()) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(innerPadding)
+                            .padding(horizontal = 10.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = stringResource(R.string.tracks_not_found),
+                            style = Typography.labels
                         )
-                        LazyColumn(
-                            contentPadding = innerPadding,
-                            modifier = Modifier.fillMaxSize()
-                        ) {
-                            items(localTracks.size) { index ->
-                                TrackItem(
-                                    track = localTracks[index],
-                                    onClick = {
-                                        playLocalFile(localTracks[index].data, index)
-                                    },
-                                    state = state.value.playingTrackIndex == index
-                                )
-                            }
+                    }
+                } else {
+                        AsyncImage(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(animatedBoxSize.value)
+                                .padding(10.dp)
+                                .clip(RoundedCornerShape(8.dp)),
+                            model = albumArtUri,
+                            contentDescription = "Album cover for ${currentTrack?.name}",
+                            contentScale = ContentScale.Crop,
+                            placeholder = painterResource(R.drawable.play_arrow),
+                            error = painterResource(R.drawable.play_arrow),
+                            fallback = painterResource(R.drawable.play_arrow)
+                        )
+                    LazyColumn(
+                        contentPadding = innerPadding,
+                        modifier = Modifier.fillMaxSize()
+                    ) {
+                        items(filteredList.size) { index ->
+                            TrackItem(
+                                track = filteredList[index],
+                                onClick = {
+                                    playLocalFile(filteredList[index].data, index)
+                                    currentTrack = filteredList[index]
+                                },
+                                state = state.value.playingTrackIndex == index
+                            )
                         }
                     }
                 }
             }
         }
-
     }
 }
 
@@ -250,6 +271,7 @@ private fun getLocalMusicFiles(context: Context): List<Track> {
         MediaStore.Audio.Media.DISPLAY_NAME,
         MediaStore.Audio.Media.DATA,
         MediaStore.Audio.Media.DURATION,
+        MediaStore.Audio.Media.ALBUM_ID,
     )
     val selection = "${MediaStore.Audio.Media.IS_MUSIC} != 0"
     context.contentResolver.query(
@@ -263,15 +285,14 @@ private fun getLocalMusicFiles(context: Context): List<Track> {
         val nameColumn = cursor.getColumnIndexOrThrow(MediaStore.Audio.Media.DISPLAY_NAME)
         val dataColumn = cursor.getColumnIndexOrThrow(MediaStore.Audio.Media.DATA)
         val duration = cursor.getColumnIndexOrThrow(MediaStore.Audio.Media.DURATION)
+        val albumId = cursor.getColumnIndexOrThrow(MediaStore.Audio.Media.ALBUM_ID)
         while (cursor.moveToNext()) {
             val id = cursor.getLong(idColumn)
             val name = cursor.getString(nameColumn)
             val data = cursor.getString(dataColumn)
             val duration = cursor.getInt(duration)
-            trackList.add(Track(id, name, data, duration))
-            Log.i(
-                "database", "data = $data, \nid=$id, \nname = $name,\nduration = $duration"
-            )
+            val album = cursor.getLong(albumId)
+            trackList.add(Track(id, name, data, duration, album))
         }
     }
     return trackList.sortedWith(compareBy { it.name })
