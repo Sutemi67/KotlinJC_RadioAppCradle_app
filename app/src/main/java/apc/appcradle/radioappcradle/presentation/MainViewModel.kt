@@ -28,6 +28,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.withContext
+import org.koin.core.context.GlobalContext
 
 class MainViewModel(
     private val sharedPrefs: SharedPreferences
@@ -124,9 +125,9 @@ class MainViewModel(
     }
 
 
-    fun playTrackList(tracks: List<Track>, context: Context) {
+    fun playTrackList(tracks: List<Track>) {
         if (tracks.isEmpty()) {
-            Toast.makeText(context, "В плейлисте нет треков", Toast.LENGTH_SHORT).show()
+//            Toast.makeText(context, "В плейлисте нет треков", Toast.LENGTH_SHORT).show()
             return
         }
         if (uiState.value.playbackStatus == PlaybackCurrentStatus.PlayingQueue) {

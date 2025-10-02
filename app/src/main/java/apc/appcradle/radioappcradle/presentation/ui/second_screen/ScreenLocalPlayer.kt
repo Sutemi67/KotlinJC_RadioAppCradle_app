@@ -5,25 +5,29 @@ import android.content.Context
 import android.os.Build
 import android.provider.MediaStore
 import android.util.Log
+import androidx.compose.animation.Crossfade
+import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material3.Button
-import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.State
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -33,33 +37,45 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import apc.appcradle.radioappcradle.presentation.MainViewModel
 import apc.appcradle.radioappcradle.R
+import apc.appcradle.radioappcradle.domain.PlaybackCurrentStatus
+import apc.appcradle.radioappcradle.domain.PlayerUiState
 import apc.appcradle.radioappcradle.domain.Track
+import apc.appcradle.radioappcradle.presentation.ui.theme.RadioAppCradleTheme
 import apc.appcradle.radioappcradle.presentation.ui.theme.Typography
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.google.accompanist.permissions.isGranted
 import com.google.accompanist.permissions.rememberPermissionState
 
-@OptIn(ExperimentalPermissionsApi::class, ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalPermissionsApi::class)
 @Composable
 fun ScreenLocalPlayer(
-    viewModel: MainViewModel
+    state: State<PlayerUiState>,
+    onLaunch: suspend () -> Unit,
+    playLocalFile: (String, Int) -> Unit,
+    playNext: () -> Unit,
+    playPrevious: () -> Unit,
+    playTracklist: (List<Track>) -> Unit
 ) {
     val context = LocalContext.current
-    var localTracks by remember { mutableStateOf<List<Track>>(emptyList()) }
-    var isSearched by remember { mutableStateOf(false) }
+    var localTracks by remember { mutableStateOf(getLocalMusicFiles(context)) }
     var isLoading by remember { mutableStateOf(true) }
-    val playingTrackIndex = viewModel.uiState.collectAsStateWithLifecycle().value.playingTrackIndex
+    var boxSize by remember { mutableStateOf(0.dp) }
+    val animatedBoxSize =
+        animateDpAsState(targetValue = boxSize, animationSpec = tween(durationMillis = 3000))
 
     LaunchedEffect(Unit) {
-        viewModel.initializeMediaController(context)
-        localTracks = viewModel.loadTrackList()
-        if (localTracks.isNotEmpty()) isSearched = true
+        onLaunch()
         isLoading = false
+    }
+    LaunchedEffect(state.value.playbackStatus) {
+        boxSize = when (state.value.playbackStatus) {
+            PlaybackCurrentStatus.PlayingSolo, PlaybackCurrentStatus.PlayingQueue -> 200.dp
+
+            else -> 0.dp
+        }
     }
 
     val permission = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
@@ -69,46 +85,13 @@ fun ScreenLocalPlayer(
     }
     val storagePermissionState = rememberPermissionState(permission = permission)
 
-    fun searchLocalMusicFiles() {
-        localTracks = getLocalMusicFiles(context, viewModel)
-        isSearched = true
-    }
-
     Scaffold(
-        topBar = {
-            TopAppBar(
-                title = {
-                    if (localTracks.isEmpty()) {
-                        Column {
-                            Text("Local Music", style = Typography.h2)
-                            if (isLoading) LinearProgressIndicator()
-                        }
-                    } else {
-                        Text("Local Music: ${localTracks.size} tracks", style = Typography.h2)
-                    }
-                },
-                actions = {
-                    IconButton(
-                        onClick = {
-                            if (storagePermissionState.status.isGranted) {
-                                searchLocalMusicFiles()
-                            } else {
-                                storagePermissionState.launchPermissionRequest()
-                            }
-                        }) {
-                        Icon(
-                            painter = painterResource(R.drawable.refresh),
-                            contentDescription = "Refresh files",
-                            tint = MaterialTheme.colorScheme.primary
-                        )
-                    }
-                }
-            )
-        },
         bottomBar = {
             PlaybackControls(
-                viewModel = viewModel,
-                trackList = localTracks
+                uiState = state,
+                playNext = playNext,
+                playPrevious = playPrevious,
+                playTracklist = { playTracklist(localTracks) }
             )
         }
     ) { innerPadding ->
@@ -127,8 +110,7 @@ fun ScreenLocalPlayer(
                 }
             }
         } else {
-            if (!isSearched) {
-
+            if (localTracks.isEmpty()) {
                 Box(
                     modifier = Modifier
                         .fillMaxSize()
@@ -137,26 +119,64 @@ fun ScreenLocalPlayer(
                     contentAlignment = Alignment.Center
                 ) {
                     Text(
-                        textAlign = TextAlign.Center,
-                        text = "Нажмите на значок обновления, чтобы найти локальные треки",
+                        text = stringResource(R.string.tracks_not_found),
                         style = Typography.labels
                     )
                 }
             } else {
-                if (localTracks.isEmpty()) {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .padding(innerPadding)
-                            .padding(horizontal = 10.dp),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Text(
-                            text = stringResource(R.string.tracks_not_found),
-                            style = Typography.labels
-                        )
+                Column {
+                    Crossfade(
+                        targetState = state.value.playbackStatus,
+                        animationSpec = tween(durationMillis = 3000)
+                    ) { state ->
+                        when (state) {
+                            PlaybackCurrentStatus.PlayingSolo, PlaybackCurrentStatus.PlayingQueue -> {
+                                Icon(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .height(animatedBoxSize.value),
+                                    painter = painterResource(R.drawable.play_arrow),
+                                    contentDescription = null
+                                )
+                            }
+
+                            else -> {
+                                if (localTracks.isEmpty()) {
+                                    Column {
+                                        Text("Local Music", style = Typography.h2)
+                                        if (isLoading) LinearProgressIndicator()
+                                    }
+                                } else {
+                                    Row(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .padding(horizontal = 20.dp),
+                                        horizontalArrangement = Arrangement.SpaceBetween,
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Text(
+                                            "Local Music: ${localTracks.size} tracks",
+                                            style = Typography.h2
+                                        )
+                                        IconButton(
+                                            onClick = {
+                                                if (storagePermissionState.status.isGranted) {
+                                                    localTracks = getLocalMusicFiles(context)
+                                                } else {
+                                                    storagePermissionState.launchPermissionRequest()
+                                                }
+                                            }) {
+                                            Icon(
+                                                painter = painterResource(R.drawable.refresh),
+                                                contentDescription = "Refresh files",
+                                                tint = MaterialTheme.colorScheme.primary
+                                            )
+                                        }
+                                    }
+                                }
+                            }
+                        }
                     }
-                } else {
                     LazyColumn(
                         contentPadding = innerPadding,
                         modifier = Modifier.fillMaxSize()
@@ -165,9 +185,9 @@ fun ScreenLocalPlayer(
                             TrackItem(
                                 track = localTracks[index],
                                 onClick = {
-                                    viewModel.playLocalFile(localTracks[index].data, index)
+                                    playLocalFile(localTracks[index].data, index)
                                 },
-                                state = playingTrackIndex == index
+                                state = state.value.playingTrackIndex == index
                             )
                         }
                     }
@@ -177,7 +197,7 @@ fun ScreenLocalPlayer(
     }
 }
 
-private fun getLocalMusicFiles(context: Context, viewModel: MainViewModel): List<Track> {
+private fun getLocalMusicFiles(context: Context): List<Track> {
     val trackList = mutableListOf<Track>()
     val projection = arrayOf(
         MediaStore.Audio.Media._ID,
@@ -208,6 +228,24 @@ private fun getLocalMusicFiles(context: Context, viewModel: MainViewModel): List
             )
         }
     }
-    viewModel.saveTrackList(trackList)
     return trackList
+}
+
+@Preview
+@Composable
+private fun Preview() {
+    RadioAppCradleTheme {
+//        val mockUiState =
+//            remember { mutableStateOf(PlayerUiState().copy(playbackStatus = PlaybackCurrentStatus.PlayingSolo)) }
+        val mockUiState =
+            remember { mutableStateOf(PlayerUiState()) }
+        ScreenLocalPlayer(
+            state = mockUiState,
+            onLaunch = { },
+            playLocalFile = { _, _ -> },
+            playPrevious = {},
+            playNext = {},
+            playTracklist = {}
+        )
+    }
 }

@@ -21,7 +21,6 @@ import apc.appcradle.radioappcradle.R
 import apc.appcradle.radioappcradle.domain.Track
 import apc.appcradle.radioappcradle.presentation.ui.theme.Typography
 
-
 @Composable
 fun TrackItem(
     state: Boolean,

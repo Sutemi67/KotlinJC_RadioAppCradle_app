@@ -8,10 +8,10 @@
             <InsightsFilterSettings>
               <option name="connection">
                 <ConnectionSetting>
-                  <option name="appId" value="PLACEHOLDER" />
-                  <option name="mobileSdkAppId" value="" />
-                  <option name="projectId" value="" />
-                  <option name="projectNumber" value="" />
+                  <option name="appId" value="apc.appcradle.radioappcradle" />
+                  <option name="mobileSdkAppId" value="1:132370592308:android:fbe4d65a4cd1f5aa2ed061" />
+                  <option name="projectId" value="appcradleradio" />
+                  <option name="projectNumber" value="132370592308" />
                 </ConnectionSetting>
               </option>
               <option name="signal" value="SIGNAL_UNSPECIFIED" />
