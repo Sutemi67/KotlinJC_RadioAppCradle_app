@@ -9,17 +9,11 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import apc.appcradle.radioappcradle.domain.PlayerUiState
 import apc.appcradle.radioappcradle.presentation.MainViewModel
-import apc.appcradle.radioappcradle.presentation.ui.second_screen.PlaybackControls
 import apc.appcradle.radioappcradle.presentation.ui.second_screen.ScreenLocalPlayer
-import apc.appcradle.radioappcradle.presentation.ui.theme.RadioAppCradleTheme
 import apc.appcradle.radioappcradle.presentation.ui.theme.Typography
 import org.koin.androidx.compose.koinViewModel
 
@@ -38,14 +32,11 @@ fun PlayerMainHost() {
         Box(Modifier.padding(paddingValues)) {
             ScreenLocalPlayer(
                 state = uiState,
-                onLaunch = {
-                    viewModel.initializeMediaController(context)
-//                    viewModel.loadTrackList()
-                },
+                onLaunch = { viewModel.initializeMediaController(context) },
                 playLocalFile = { filePath, index -> viewModel.playLocalFile(filePath, index) },
                 playNext = { viewModel.playNext() },
                 playPrevious = { viewModel.playPrevious() },
-                playTracklist = {trackList-> viewModel.playTrackList(trackList) }
+                playTracklist = { trackList -> viewModel.playTrackList(trackList) }
             )
         }
     }

@@ -1,7 +1,6 @@
 package apc.appcradle.radioappcradle.presentation.ui.second_screen
 
-import androidx.compose.animation.animateContentSize
-import androidx.compose.animation.core.EaseIn
+import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -18,9 +17,12 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.State
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.painterResource
@@ -39,17 +41,23 @@ fun PlaybackControls(
     playNext: () -> Unit,
     playTracklist: () -> Unit,
 ) {
-    val playerState = uiState
     val borderColor = MaterialTheme.colorScheme.surfaceContainerHighest
     val bgColor = MaterialTheme.colorScheme.surfaceContainer
-    val iconNormalSize = 50.dp
-    val iconBigSize = 130.dp
-    val expanded = playerState.value.playbackStatus == PlaybackCurrentStatus.PlayingQueue
+
+    var rowSize by remember { mutableStateOf(50.dp) }
+    val expanded by remember(uiState.value.playbackStatus) { mutableStateOf(uiState.value.playbackStatus == PlaybackCurrentStatus.PlayingQueue) }
+
+    val animateSize =
+        animateDpAsState(targetValue = rowSize, animationSpec = tween(durationMillis = 2000))
+
+    LaunchedEffect(expanded) {
+        rowSize = if (expanded) 130.dp else 50.dp
+    }
+
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .animateContentSize(tween(durationMillis = 1500))
-            .height(if (expanded) iconBigSize else iconNormalSize)
+            .height(animateSize.value)
             .border(width = 2.dp, shape = RoundedCornerShape(5.dp), color = borderColor)
             .background(color = bgColor),
         horizontalArrangement = Arrangement.SpaceEvenly,
@@ -58,9 +66,6 @@ fun PlaybackControls(
         IconButton(
             modifier = Modifier
                 .padding(5.dp)
-                .animateContentSize(
-                    animationSpec = tween(durationMillis = 2000, easing = EaseIn)
-                )
                 .fillMaxHeight()
                 .aspectRatio(0.6f),
             onClick = playPrevious,
@@ -76,16 +81,13 @@ fun PlaybackControls(
         IconButton(
             modifier = Modifier
                 .padding(5.dp)
-                .animateContentSize(
-                    animationSpec = tween(durationMillis = 2000, easing = EaseIn)
-                )
                 .fillMaxHeight()
                 .aspectRatio(1f),
             onClick = playTracklist,
         ) {
             Icon(
                 modifier = Modifier.fillMaxSize(),
-                painter = when (playerState.value.playbackStatus) {
+                painter = when (uiState.value.playbackStatus) {
                     PlaybackCurrentStatus.PlayingQueue -> painterResource(R.drawable.pause)
                     else -> painterResource(R.drawable.play)
                 },
@@ -96,9 +98,6 @@ fun PlaybackControls(
         IconButton(
             modifier = Modifier
                 .padding(5.dp)
-                .animateContentSize(
-                    animationSpec = tween(durationMillis = 2000, easing = EaseIn)
-                )
                 .fillMaxHeight()
                 .aspectRatio(0.6f),
             onClick = playNext,

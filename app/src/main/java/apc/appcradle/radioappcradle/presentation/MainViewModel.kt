@@ -2,37 +2,24 @@ package apc.appcradle.radioappcradle.presentation
 
 import android.content.ComponentName
 import android.content.Context
-import android.content.SharedPreferences
-import android.widget.Toast
-import androidx.core.content.edit
 import androidx.lifecycle.ViewModel
 import androidx.media3.common.MediaItem
-import androidx.media3.common.MediaMetadata
 import androidx.media3.common.MimeTypes
 import androidx.media3.common.Player
 import androidx.media3.session.MediaController
 import androidx.media3.session.SessionToken
 import apc.appcradle.radioappcradle.PlaybackService
-import apc.appcradle.radioappcradle.TRACKLIST_SAVE_KEY
 import apc.appcradle.radioappcradle.domain.PlaybackCurrentStatus
 import apc.appcradle.radioappcradle.domain.PlayerUiState
 import apc.appcradle.radioappcradle.domain.Track
 import com.google.common.util.concurrent.ListenableFuture
 import com.google.common.util.concurrent.MoreExecutors
-import com.google.gson.Gson
-import com.google.gson.reflect.TypeToken
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
-import kotlinx.coroutines.withContext
-import org.koin.core.context.GlobalContext
 
-class MainViewModel(
-    private val sharedPrefs: SharedPreferences
-) : ViewModel() {
+class MainViewModel() : ViewModel() {
 
     private val _uiState = MutableStateFlow(PlayerUiState())
     val uiState: StateFlow<PlayerUiState> = _uiState.asStateFlow()
@@ -97,39 +84,8 @@ class MainViewModel(
         }
     }
 
-    fun playStream(url: String) {
-        if (uiState.value.playbackStatus == PlaybackCurrentStatus.PlayingStream && uiState.value.streamUrl == url) {
-            mediaController?.stop()
-            _uiState.update {
-                it.copy(
-                    playbackStatus = PlaybackCurrentStatus.Stopped,
-                    streamUrl = null,
-                )
-            }
-        } else {
-            val mediaItem = MediaItem.Builder().setMediaId(url).setMediaMetadata(
-                MediaMetadata.Builder().setTitle("Radio Player").build()
-            ).build()
-            mediaController?.setMediaItem(mediaItem)
-            mediaController?.prepare()
-            mediaController?.play()
-            _uiState.update {
-                it.copy(
-                    playbackStatus = PlaybackCurrentStatus.PlayingStream,
-                    playingTrackIndex = null,
-                    streamUrl = url,
-                    isPlayerQueuePrepared = false,
-                )
-            }
-        }
-    }
-
-
     fun playTrackList(tracks: List<Track>) {
-        if (tracks.isEmpty()) {
-//            Toast.makeText(context, "В плейлисте нет треков", Toast.LENGTH_SHORT).show()
-            return
-        }
+        if (tracks.isEmpty()) return
         if (uiState.value.playbackStatus == PlaybackCurrentStatus.PlayingQueue) {
             mediaController?.pause()
             _uiState.update { it.copy(playbackStatus = PlaybackCurrentStatus.PausedQueue) }
@@ -212,19 +168,6 @@ class MainViewModel(
             override fun onIsPlayingChanged(isPlaying: Boolean) {
 
             }
-
         })
-    }
-
-    fun saveTrackList(trackList: List<Track>) {
-        val json = Gson().toJson(trackList)
-        sharedPrefs.edit { putString(TRACKLIST_SAVE_KEY, json) }
-    }
-
-    suspend fun loadTrackList(): List<Track> = withContext(Dispatchers.IO) {
-        delay(1000L)
-        val itemType = object : TypeToken<List<Track>>() {}.type
-        val json = sharedPrefs.getString(TRACKLIST_SAVE_KEY, null) ?: return@withContext emptyList()
-        Gson().fromJson(json, itemType)
     }
 }
