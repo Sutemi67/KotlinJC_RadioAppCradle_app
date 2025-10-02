@@ -24,6 +24,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.Button
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -45,6 +46,7 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.core.net.toUri
@@ -213,7 +215,9 @@ fun ScreenLocalPlayer(
                             .fillMaxWidth()
                             .padding(horizontal = 20.dp, vertical = 5.dp),
                         value = filterText,
-                        onValueChange = { filterText = it }
+                        onValueChange = { filterText = it },
+                        singleLine = true,
+                        keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done)
                     )
                 }
                 if (localTracks.isEmpty()) {
@@ -230,19 +234,19 @@ fun ScreenLocalPlayer(
                         )
                     }
                 } else {
-                        AsyncImage(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .height(animatedBoxSize.value)
-                                .padding(10.dp)
-                                .clip(RoundedCornerShape(8.dp)),
-                            model = albumArtUri,
-                            contentDescription = "Album cover for ${currentTrack?.name}",
-                            contentScale = ContentScale.Crop,
-                            placeholder = painterResource(R.drawable.play_arrow),
-                            error = painterResource(R.drawable.play_arrow),
-                            fallback = painterResource(R.drawable.play_arrow)
-                        )
+                    AsyncImage(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(animatedBoxSize.value)
+                            .padding(10.dp)
+                            .clip(RoundedCornerShape(8.dp)),
+                        model = albumArtUri,
+                        contentDescription = "Album cover for ${currentTrack?.name}",
+                        contentScale = ContentScale.Crop,
+                        placeholder = painterResource(R.drawable.play_arrow),
+                        error = painterResource(R.drawable.play_arrow),
+                        fallback = painterResource(R.drawable.play_arrow)
+                    )
                     LazyColumn(
                         contentPadding = innerPadding,
                         modifier = Modifier.fillMaxSize()
