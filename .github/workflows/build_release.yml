@@ -1,9 +1,8 @@
-name: Build Release APK on Master Merge
+name: Build Release APK
 
 on:
   push:
-    branches:
-      - master
+    branches: [ "main" ]
 
 jobs:
   build:
