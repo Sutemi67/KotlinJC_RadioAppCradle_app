@@ -28,8 +28,10 @@ class MainViewModel() : ViewModel() {
     internal var mediaControllerFuture: ListenableFuture<MediaController>? = null
     private var mediaController: MediaController? = null
 
+    fun checkPermissions(){
+
+    }
     fun initializeMediaController(context: Context) {
-        _uiState.update { it.copy(isLoading = true) }
         val sessionToken = SessionToken(
             context, ComponentName(context, PlaybackService::class.java)
         )
@@ -38,7 +40,7 @@ class MainViewModel() : ViewModel() {
             mediaController = mediaControllerFuture?.get()
             updateUIWithMediaController(mediaController!!)
         }, MoreExecutors.directExecutor())
-        getLocalMusicFiles(context)
+//        getLocalMusicFiles(context)
     }
 
     private val playerListener = object : Player.Listener {
@@ -178,7 +180,6 @@ class MainViewModel() : ViewModel() {
         }
         )
     }
-
 
     fun getLocalMusicFiles(context: Context) {
         _uiState.update { it.copy(isLoading = true) }

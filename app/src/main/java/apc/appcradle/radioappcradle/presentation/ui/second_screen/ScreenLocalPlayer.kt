@@ -21,6 +21,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.Button
@@ -32,7 +33,9 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.State
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -77,13 +80,17 @@ fun ScreenLocalPlayer(
     var isFilterActive by remember { mutableStateOf(false) }
     var filterText by remember { mutableStateOf("") }
 
-    val filteredList = localTracks.filter {
-        it.name.trim().lowercase().contains(filterText, ignoreCase = true)
+    val normalizedQuery by remember(filterText) { derivedStateOf { filterText.trim().lowercase() } }
+    val filteredList by remember(localTracks, normalizedQuery) {
+        derivedStateOf {
+            if (normalizedQuery.isEmpty()) localTracks
+            else localTracks.filter {
+                it.name.trim().lowercase().contains(normalizedQuery, ignoreCase = true)
+            }
+        }
     }
-    val albumArtUri =
-        "content://media/external/audio/albumart".toUri().buildUpon()
-            .appendPath(currentTrack?.albumId.toString())
-            .build()
+    val albumArtUri = "content://media/external/audio/albumart".toUri().buildUpon()
+        .appendPath(currentTrack?.albumId.toString()).build()
 
     val animateSearchColor = animateColorAsState(
         targetValue = if (isFilterActive) activeColor else inactiveColor,
@@ -97,8 +104,7 @@ fun ScreenLocalPlayer(
         targetValue = when (state.value.playbackStatus) {
             PlaybackCurrentStatus.PlayingSolo, PlaybackCurrentStatus.PlayingQueue -> 200.dp
             else -> 0.dp
-        },
-        animationSpec = tween(durationMillis = animationDuration)
+        }, animationSpec = tween(durationMillis = animationDuration)
     )
     val permission = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
         Manifest.permission.READ_MEDIA_AUDIO
@@ -107,27 +113,28 @@ fun ScreenLocalPlayer(
     }
     val storagePermissionState = rememberPermissionState(permission = permission)
 
+    LaunchedEffect(storagePermissionState.status.isGranted) {
+        updateTrackList()
+    }
+
     Scaffold(
         bottomBar = {
-            if (localTracks.isNotEmpty())
-                PlaybackControls(
-                    state = state,
-                    playNext = {
-                        playNext()
-                    },
-                    playPrevious = playPrevious,
-                    playTracklist = playTracklist,
-                )
-        }
-    ) { innerPadding ->
+            if (localTracks.isNotEmpty()) PlaybackControls(
+                state = state,
+                playNext = {
+                    playNext()
+                },
+                playPrevious = playPrevious,
+                playTracklist = playTracklist,
+            )
+        }) { innerPadding ->
         Crossfade(
             targetState = state.value.playbackStatus
         ) { status ->
             when (status) {
                 PlaybackCurrentStatus.PlayingQueue -> {
                     Column(
-                        modifier = Modifier.fillMaxSize(),
-                        horizontalAlignment = Alignment.Start
+                        modifier = Modifier.fillMaxSize(), horizontalAlignment = Alignment.Start
                     ) {
                         AsyncImage(
                             modifier = Modifier
@@ -136,8 +143,7 @@ fun ScreenLocalPlayer(
                                 .padding(10.dp)
                                 .clip(RoundedCornerShape(12.dp)),
                             model = "content://media/external/audio/albumart".toUri().buildUpon()
-                                .appendPath(state.value.currentTrack?.albumId.toString())
-                                .build(),
+                                .appendPath(state.value.currentTrack?.albumId.toString()).build(),
                             contentDescription = "Album cover for ${currentTrack?.name}",
                             contentScale = ContentScale.Crop,
                             placeholder = painterResource(R.drawable.play_arrow),
@@ -260,17 +266,23 @@ fun ScreenLocalPlayer(
                                     fallback = painterResource(R.drawable.play_arrow)
                                 )
                                 LazyColumn(
-                                    contentPadding = innerPadding,
-                                    modifier = Modifier.fillMaxSize()
+                                    contentPadding = innerPadding, modifier = Modifier.fillMaxSize()
                                 ) {
-                                    items(filteredList.size) { index ->
+                                    items(items = filteredList, key = { it.id }) { track ->
+                                        val playingIndex = state.value.playingTrackIndex
+                                        val isPlaying =
+                                            playingIndex != null && filteredList.getOrNull(
+                                                playingIndex
+                                            ) == track
                                         TrackItem(
-                                            track = filteredList[index],
+                                            track = track,
                                             onClick = {
-                                                playLocalFile(filteredList[index].data, index)
-                                                currentTrack = filteredList[index]
+                                                playLocalFile(
+                                                    track.data,
+                                                    filteredList.indexOf(track)
+                                                )
                                             },
-                                            state = state.value.playingTrackIndex == index
+                                            state = isPlaying
                                         )
                                     }
                                 }

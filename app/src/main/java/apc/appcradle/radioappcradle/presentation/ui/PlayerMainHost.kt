@@ -28,7 +28,6 @@ fun PlayerMainHost() {
 
     LaunchedEffect(Unit) {
         viewModel.initializeMediaController(context)
-//        viewModel.getLocalMusicFiles(context)
     }
 
     Scaffold(
