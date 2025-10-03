@@ -7,7 +7,7 @@ plugins {
 android {
     signingConfigs {
         create("release") {
-            storeFile = file("friends_activity_key.jks")
+            storeFile = file("app_cradle_player.jks")
             storePassword = System.getenv("KEYSTORE_PASSWORD")
             keyAlias = System.getenv("KEY_ALIAS")
             keyPassword = System.getenv("KEY_PASSWORD")
