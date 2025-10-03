@@ -38,7 +38,7 @@ jobs:
       # 🔐 Создаем keystore из секрета
       - name: Create keystore from secret
         run: |
-          echo "${{ secrets.KEYSTORE_FILE_BASE64 }}" | base64 --decode > ./app/friends_activity_key.jks
+          echo "${{ secrets.KEYSTORE_FILE_BASE64 }}" | base64 --decode > ./app/app_cradle_player.jks
 
       # 🏗️ Собираем Release APK
       - name: Build Release APK
