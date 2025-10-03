@@ -9,6 +9,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -24,6 +25,12 @@ fun PlayerMainHost() {
     val viewModel: MainViewModel = koinViewModel()
     val uiState = viewModel.uiState.collectAsStateWithLifecycle()
     val context = LocalContext.current
+
+    LaunchedEffect(Unit) {
+        viewModel.initializeMediaController(context)
+//        viewModel.getLocalMusicFiles(context)
+    }
+
     Scaffold(
         topBar = {
             TopAppBar(
@@ -39,7 +46,7 @@ fun PlayerMainHost() {
         Box(Modifier.padding(paddingValues)) {
             ScreenLocalPlayer(
                 state = uiState,
-                onLaunch = { viewModel.initializeMediaController(context) },
+                updateTrackList = { viewModel.getLocalMusicFiles(context) },
                 playLocalFile = { filePath, index -> viewModel.playLocalFile(filePath, index) },
                 playNext = { viewModel.playNext() },
                 playPrevious = { viewModel.playPrevious() },

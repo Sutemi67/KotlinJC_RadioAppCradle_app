@@ -1,10 +1,7 @@
 package apc.appcradle.radioappcradle.presentation.ui.second_screen
 
 import android.Manifest
-import android.content.Context
-import android.net.Uri
 import android.os.Build
-import android.provider.MediaStore
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.animateDpAsState
@@ -28,12 +25,12 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.Button
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.State
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -43,7 +40,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.ImeAction
@@ -65,70 +61,45 @@ import com.google.accompanist.permissions.rememberPermissionState
 @Composable
 fun ScreenLocalPlayer(
     state: State<PlayerUiState>,
-    onLaunch: suspend () -> Unit,
+    updateTrackList: () -> Unit,
     playLocalFile: (String, Int) -> Unit,
     playNext: () -> Unit,
     playPrevious: () -> Unit,
     playTracklist: (List<Track>) -> Unit
 ) {
     val animationDuration = 1000
-    val context = LocalContext.current
     val activeColor = MaterialTheme.colorScheme.primary
     val inactiveColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.4f)
-    var currentTrack: Track? by remember { mutableStateOf(null) }
 
-    var localTracks by remember { mutableStateOf(getLocalMusicFiles(context)) }
-    var filteredList by remember { mutableStateOf(localTracks) }
-    var isLoading by remember { mutableStateOf(true) }
-    var boxSize by remember { mutableStateOf(0.dp) }
+    var currentTrack: Track? by remember { mutableStateOf(null) }
+    var localTracks by remember(state.value.localTrackList) { mutableStateOf(state.value.localTrackList) }
     var isFilterActive by remember { mutableStateOf(false) }
     var filterText by remember { mutableStateOf("") }
-    var searchButtonColor by remember { mutableStateOf(inactiveColor) }
-    var refreshButtonColor by remember { mutableStateOf(inactiveColor) }
-    var albumArtUri: Uri? by remember { mutableStateOf(null) }
+
+    if (!isFilterActive) filterText = ""
+    val filteredList = localTracks.filter {
+        it.name.trim().lowercase().contains(filterText, ignoreCase = true)
+    }
+    val albumArtUri =
+        "content://media/external/audio/albumart".toUri().buildUpon()
+            .appendPath(currentTrack?.albumId.toString())
+            .build()
 
     val animateSearchColor = animateColorAsState(
-        targetValue = searchButtonColor,
+        targetValue = if (isFilterActive) activeColor else inactiveColor,
         animationSpec = tween(animationDuration)
     )
     val animateRefreshColor = animateColorAsState(
-        targetValue = refreshButtonColor,
+        targetValue = if (state.value.isLoading) activeColor else inactiveColor,
         animationSpec = tween(animationDuration)
     )
-    val animatedBoxSize =
-        animateDpAsState(
-            targetValue = boxSize,
-            animationSpec = tween(durationMillis = animationDuration)
-        )
-    LaunchedEffect(currentTrack) {
-        albumArtUri =
-            "content://media/external/audio/albumart".toUri().buildUpon()
-                .appendPath(currentTrack?.albumId.toString())
-                .build()
-    }
-    LaunchedEffect(filterText) {
-        filteredList = localTracks.filter {
-            it.name.trim().lowercase().contains(filterText, ignoreCase = true)
-        }
-    }
-    LaunchedEffect(isFilterActive, isLoading) {
-        searchButtonColor = if (isFilterActive) activeColor else inactiveColor
-        refreshButtonColor = if (isLoading) activeColor else inactiveColor
-        if (!isFilterActive) filterText = ""
-    }
-
-    LaunchedEffect(Unit) {
-        onLaunch()
-        isLoading = false
-    }
-
-    LaunchedEffect(state.value.playbackStatus) {
-        boxSize = when (state.value.playbackStatus) {
+    val animatedBoxSize = animateDpAsState(
+        targetValue = when (state.value.playbackStatus) {
             PlaybackCurrentStatus.PlayingSolo -> 200.dp
             else -> 0.dp
-        }
-    }
-
+        },
+        animationSpec = tween(durationMillis = animationDuration)
+    )
     val permission = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
         Manifest.permission.READ_MEDIA_AUDIO
     } else {
@@ -181,7 +152,7 @@ fun ScreenLocalPlayer(
                     IconButton(
                         onClick = {
                             if (storagePermissionState.status.isGranted) {
-                                localTracks = getLocalMusicFiles(context)
+                                updateTrackList()
                             } else {
                                 storagePermissionState.launchPermissionRequest()
                             }
@@ -200,6 +171,9 @@ fun ScreenLocalPlayer(
                             tint = animateSearchColor.value
                         )
                     }
+                }
+                Box(Modifier.height(5.dp)) {
+                    if (state.value.isLoading) LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
                 }
                 AnimatedVisibility(
                     visible = isFilterActive,
@@ -268,39 +242,39 @@ fun ScreenLocalPlayer(
     }
 }
 
-private fun getLocalMusicFiles(context: Context): List<Track> {
-    val trackList = mutableListOf<Track>()
-    val projection = arrayOf(
-        MediaStore.Audio.Media._ID,
-        MediaStore.Audio.Media.DISPLAY_NAME,
-        MediaStore.Audio.Media.DATA,
-        MediaStore.Audio.Media.DURATION,
-        MediaStore.Audio.Media.ALBUM_ID,
-    )
-    val selection = "${MediaStore.Audio.Media.IS_MUSIC} != 0"
-    context.contentResolver.query(
-        MediaStore.Audio.Media.EXTERNAL_CONTENT_URI,     //EXTERNAL для флешки INTERNAL для внутренней памяти
-        projection,
-        selection,
-        null,
-        null
-    )?.use { cursor ->
-        val idColumn = cursor.getColumnIndexOrThrow(MediaStore.Audio.Media._ID)
-        val nameColumn = cursor.getColumnIndexOrThrow(MediaStore.Audio.Media.DISPLAY_NAME)
-        val dataColumn = cursor.getColumnIndexOrThrow(MediaStore.Audio.Media.DATA)
-        val duration = cursor.getColumnIndexOrThrow(MediaStore.Audio.Media.DURATION)
-        val albumId = cursor.getColumnIndexOrThrow(MediaStore.Audio.Media.ALBUM_ID)
-        while (cursor.moveToNext()) {
-            val id = cursor.getLong(idColumn)
-            val name = cursor.getString(nameColumn)
-            val data = cursor.getString(dataColumn)
-            val duration = cursor.getInt(duration)
-            val album = cursor.getLong(albumId)
-            trackList.add(Track(id, name, data, duration, album))
-        }
-    }
-    return trackList.sortedWith(compareBy { it.name })
-}
+//private fun getLocalMusicFiles(context: Context): List<Track> {
+//    val trackList = mutableListOf<Track>()
+//    val projection = arrayOf(
+//        MediaStore.Audio.Media._ID,
+//        MediaStore.Audio.Media.DISPLAY_NAME,
+//        MediaStore.Audio.Media.DATA,
+//        MediaStore.Audio.Media.DURATION,
+//        MediaStore.Audio.Media.ALBUM_ID,
+//    )
+//    val selection = "${MediaStore.Audio.Media.IS_MUSIC} != 0"
+//    context.contentResolver.query(
+//        MediaStore.Audio.Media.EXTERNAL_CONTENT_URI,     //EXTERNAL для флешки INTERNAL для внутренней памяти
+//        projection,
+//        selection,
+//        null,
+//        null
+//    )?.use { cursor ->
+//        val idColumn = cursor.getColumnIndexOrThrow(MediaStore.Audio.Media._ID)
+//        val nameColumn = cursor.getColumnIndexOrThrow(MediaStore.Audio.Media.DISPLAY_NAME)
+//        val dataColumn = cursor.getColumnIndexOrThrow(MediaStore.Audio.Media.DATA)
+//        val duration = cursor.getColumnIndexOrThrow(MediaStore.Audio.Media.DURATION)
+//        val albumId = cursor.getColumnIndexOrThrow(MediaStore.Audio.Media.ALBUM_ID)
+//        while (cursor.moveToNext()) {
+//            val id = cursor.getLong(idColumn)
+//            val name = cursor.getString(nameColumn)
+//            val data = cursor.getString(dataColumn)
+//            val duration = cursor.getInt(duration)
+//            val album = cursor.getLong(albumId)
+//            trackList.add(Track(id, name, data, duration, album))
+//        }
+//    }
+//    return trackList.sortedWith(compareBy { it.name })
+//}
 
 @Preview
 @Composable
@@ -309,10 +283,10 @@ private fun Preview() {
         val mockUiState = remember { mutableStateOf(PlayerUiState()) }
         ScreenLocalPlayer(
             state = mockUiState,
-            onLaunch = { },
             playLocalFile = { _, _ -> },
             playPrevious = {},
             playNext = {},
+            updateTrackList = {},
             playTracklist = {}
         )
     }

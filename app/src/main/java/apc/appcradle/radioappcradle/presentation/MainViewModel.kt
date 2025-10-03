@@ -2,6 +2,7 @@ package apc.appcradle.radioappcradle.presentation
 
 import android.content.ComponentName
 import android.content.Context
+import android.provider.MediaStore
 import androidx.lifecycle.ViewModel
 import androidx.media3.common.MediaItem
 import androidx.media3.common.MimeTypes
@@ -28,6 +29,7 @@ class MainViewModel() : ViewModel() {
     private var mediaController: MediaController? = null
 
     fun initializeMediaController(context: Context) {
+        _uiState.update { it.copy(isLoading = true) }
         val sessionToken = SessionToken(
             context, ComponentName(context, PlaybackService::class.java)
         )
@@ -36,6 +38,7 @@ class MainViewModel() : ViewModel() {
             mediaController = mediaControllerFuture?.get()
             updateUIWithMediaController(mediaController!!)
         }, MoreExecutors.directExecutor())
+        getLocalMusicFiles(context)
     }
 
     private val playerListener = object : Player.Listener {
@@ -59,7 +62,8 @@ class MainViewModel() : ViewModel() {
             mediaController?.pause()
             _uiState.update {
                 it.copy(
-                    playbackStatus = PlaybackCurrentStatus.PausedSolo, playingTrackIndex = null
+                    playbackStatus = PlaybackCurrentStatus.PausedSolo,
+                    playingTrackIndex = null
                 )
             }
         } else {
@@ -148,7 +152,7 @@ class MainViewModel() : ViewModel() {
             override fun onPlaybackStateChanged(playbackState: Int) {
                 when (playbackState) {
                     Player.STATE_BUFFERING -> {
-                        _uiState.update { it.copy(isLoading = true) }
+//                        _uiState.update { it.copy(isLoading = true) }
                     }
 
                     Player.STATE_READY -> {
@@ -169,5 +173,46 @@ class MainViewModel() : ViewModel() {
 
             }
         })
+    }
+
+    fun getLocalMusicFiles(context: Context) {
+        _uiState.update { it.copy(isLoading = true) }
+        val trackList = mutableListOf<Track>()
+        val projection = arrayOf(
+            MediaStore.Audio.Media._ID,
+            MediaStore.Audio.Media.DISPLAY_NAME,
+            MediaStore.Audio.Media.DATA,
+            MediaStore.Audio.Media.DURATION,
+            MediaStore.Audio.Media.ALBUM_ID,
+        )
+        val selection = "${MediaStore.Audio.Media.IS_MUSIC} != 0"
+        context.contentResolver.query(
+            MediaStore.Audio.Media.EXTERNAL_CONTENT_URI,     //EXTERNAL для флешки INTERNAL для внутренней памяти
+            projection,
+            selection,
+            null,
+            null
+        )?.use { cursor ->
+            val idColumn = cursor.getColumnIndexOrThrow(MediaStore.Audio.Media._ID)
+            val nameColumn = cursor.getColumnIndexOrThrow(MediaStore.Audio.Media.DISPLAY_NAME)
+            val dataColumn = cursor.getColumnIndexOrThrow(MediaStore.Audio.Media.DATA)
+            val duration = cursor.getColumnIndexOrThrow(MediaStore.Audio.Media.DURATION)
+            val albumId = cursor.getColumnIndexOrThrow(MediaStore.Audio.Media.ALBUM_ID)
+            while (cursor.moveToNext()) {
+                val id = cursor.getLong(idColumn)
+                val name = cursor.getString(nameColumn)
+                val data = cursor.getString(dataColumn)
+                val duration = cursor.getInt(duration)
+                val album = cursor.getLong(albumId)
+                trackList.add(Track(id, name, data, duration, album))
+            }
+        }
+        val sortedList = trackList.sortedWith(compareBy { element -> element.name })
+        _uiState.update {
+            it.copy(
+                localTrackList = sortedList,
+                isLoading = false
+            )
+        }
     }
 }
