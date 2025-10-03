@@ -2,10 +2,17 @@ plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.compose)
-    id("com.google.gms.google-services")
 }
 
 android {
+    signingConfigs {
+        create("release") {
+            storeFile = file("friends_activity_key.jks")
+            storePassword = System.getenv("KEYSTORE_PASSWORD")
+            keyAlias = System.getenv("KEY_ALIAS")
+            keyPassword = System.getenv("KEY_PASSWORD")
+        }
+    }
     namespace = "apc.appcradle.radioappcradle"
     compileSdk = 36
 
@@ -13,8 +20,10 @@ android {
         applicationId = "apc.appcradle.radioappcradle"
         minSdk = 24
         targetSdk = 34
+
+//изменено и опубликовано 3 октября
         versionCode = 1
-        versionName = "1.0"
+        versionName = "1.0.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -27,6 +36,9 @@ android {
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
+            isDebuggable = false
+            isJniDebuggable = false
+            signingConfig = signingConfigs.getByName("release")
         }
         debug {
             isMinifyEnabled = false
@@ -79,10 +91,6 @@ dependencies {
 
     //Gson
     implementation(libs.gson)
-
-    //Firebase
-    implementation(platform(libs.firebase.bom))
-    implementation(libs.firebase.analytics)
 
     //Coil
     implementation(libs.coil.compose)
