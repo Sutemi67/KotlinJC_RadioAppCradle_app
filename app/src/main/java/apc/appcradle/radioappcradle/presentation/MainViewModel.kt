@@ -88,8 +88,8 @@ class MainViewModel() : ViewModel() {
         }
     }
 
-    fun playTrackList(tracks: List<Track>) {
-        if (tracks.isEmpty()) return
+    fun playTrackList() {
+        if (uiState.value.localTrackList.isEmpty()) return
         if (uiState.value.playbackStatus == PlaybackCurrentStatus.PlayingQueue) {
             mediaController?.pause()
             _uiState.update { it.copy(playbackStatus = PlaybackCurrentStatus.PausedQueue) }
@@ -104,7 +104,7 @@ class MainViewModel() : ViewModel() {
                 }
                 return
             } else {
-                val mediaItems = tracks.map { track ->
+                val mediaItems = uiState.value.localTrackList.map { track ->
                     MediaItem.Builder().setMediaId("file://${track.data}")
                         .setMimeType(MimeTypes.AUDIO_MPEG).build()
                 }
@@ -139,6 +139,7 @@ class MainViewModel() : ViewModel() {
     override fun onCleared() {
         super.onCleared()
         releaseController()
+        mediaController = null
     }
 
     private fun updateUIWithMediaController(controller: MediaController) {
@@ -151,29 +152,33 @@ class MainViewModel() : ViewModel() {
 
             override fun onPlaybackStateChanged(playbackState: Int) {
                 when (playbackState) {
-                    Player.STATE_BUFFERING -> {
-//                        _uiState.update { it.copy(isLoading = true) }
-                    }
-
-                    Player.STATE_READY -> {
-                        _uiState.update { it.copy(isLoading = false) }
-                    }
-
-                    Player.STATE_ENDED -> {
-
-                    }
-
-                    Player.STATE_IDLE -> {
-                        _uiState.update { it.copy(isLoading = false) }
-                    }
+                    Player.STATE_BUFFERING -> {}
+                    Player.STATE_READY -> _uiState.update { it.copy(isLoading = false) }
+                    Player.STATE_ENDED -> {}
+                    Player.STATE_IDLE -> _uiState.update { it.copy(isLoading = false) }
                 }
             }
 
             override fun onIsPlayingChanged(isPlaying: Boolean) {
 
             }
-        })
+
+            override fun onMediaItemTransition(mediaItem: MediaItem?, reason: Int) {
+                super.onMediaItemTransition(mediaItem, reason)
+                val mediaId = mediaItem?.mediaId ?: return
+                val filePath = mediaId.removePrefix("file://")
+                val currentTrack = uiState.value.localTrackList.find { it.data == filePath }
+
+                _uiState.update {
+                    it.copy(
+                        currentTrack = currentTrack,
+                    )
+                }
+            }
+        }
+        )
     }
+
 
     fun getLocalMusicFiles(context: Context) {
         _uiState.update { it.copy(isLoading = true) }

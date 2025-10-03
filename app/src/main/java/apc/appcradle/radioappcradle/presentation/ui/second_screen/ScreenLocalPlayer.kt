@@ -3,6 +3,7 @@ package apc.appcradle.radioappcradle.presentation.ui.second_screen
 import android.Manifest
 import android.os.Build
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.Crossfade
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.tween
@@ -65,7 +66,7 @@ fun ScreenLocalPlayer(
     playLocalFile: (String, Int) -> Unit,
     playNext: () -> Unit,
     playPrevious: () -> Unit,
-    playTracklist: (List<Track>) -> Unit
+    playTracklist: () -> Unit,
 ) {
     val animationDuration = 1000
     val activeColor = MaterialTheme.colorScheme.primary
@@ -76,7 +77,6 @@ fun ScreenLocalPlayer(
     var isFilterActive by remember { mutableStateOf(false) }
     var filterText by remember { mutableStateOf("") }
 
-    if (!isFilterActive) filterText = ""
     val filteredList = localTracks.filter {
         it.name.trim().lowercase().contains(filterText, ignoreCase = true)
     }
@@ -95,7 +95,7 @@ fun ScreenLocalPlayer(
     )
     val animatedBoxSize = animateDpAsState(
         targetValue = when (state.value.playbackStatus) {
-            PlaybackCurrentStatus.PlayingSolo -> 200.dp
+            PlaybackCurrentStatus.PlayingSolo, PlaybackCurrentStatus.PlayingQueue -> 200.dp
             else -> 0.dp
         },
         animationSpec = tween(durationMillis = animationDuration)
@@ -111,129 +111,170 @@ fun ScreenLocalPlayer(
         bottomBar = {
             if (localTracks.isNotEmpty())
                 PlaybackControls(
-                    uiState = state,
-                    playNext = playNext,
+                    state = state,
+                    playNext = {
+                        playNext()
+                    },
                     playPrevious = playPrevious,
-                    playTracklist = { playTracklist(localTracks) }
+                    playTracklist = playTracklist,
                 )
         }
     ) { innerPadding ->
-        if (!storagePermissionState.status.isGranted) {
-            Column(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(innerPadding),
-                verticalArrangement = Arrangement.Center,
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) {
-                Text("Разрешение на чтение файлов не предоставлено.", style = Typography.labels)
-                Spacer(modifier = Modifier.height(8.dp))
-                Button(onClick = { storagePermissionState.launchPermissionRequest() }) {
-                    Text("Предоставить разрешение", style = Typography.buttonsText)
-                }
-            }
-        } else {
-            Column(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(innerPadding),
-            ) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 20.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text(
-                        modifier = Modifier.weight(1f),
-                        text = "Local Music: ${localTracks.size} tracks",
-                        style = Typography.h2
-                    )
-                    IconButton(
-                        onClick = {
-                            if (storagePermissionState.status.isGranted) {
-                                updateTrackList()
-                            } else {
-                                storagePermissionState.launchPermissionRequest()
-                            }
-                        }) {
-                        Icon(
-                            painter = painterResource(R.drawable.refresh),
-                            contentDescription = "Refresh files",
-                            tint = animateRefreshColor.value
-                        )
-                    }
-                    IconButton(
-                        onClick = { isFilterActive = !isFilterActive }) {
-                        Icon(
-                            painter = painterResource(R.drawable.baseline_search_24),
-                            contentDescription = "search",
-                            tint = animateSearchColor.value
-                        )
-                    }
-                }
-                Box(Modifier.height(5.dp)) {
-                    if (state.value.isLoading) LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
-                }
-                AnimatedVisibility(
-                    visible = isFilterActive,
-                    enter = fadeIn(animationSpec = tween(durationMillis = animationDuration)) + expandVertically(
-                        animationSpec = tween(durationMillis = animationDuration)
-                    ),
-                    exit = fadeOut(animationSpec = tween(durationMillis = animationDuration)) + shrinkVertically(
-                        animationSpec = tween(durationMillis = animationDuration)
-                    ),
-                ) {
-                    OutlinedTextField(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 20.dp, vertical = 5.dp),
-                        value = filterText,
-                        onValueChange = { filterText = it },
-                        singleLine = true,
-                        keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done)
-                    )
-                }
-                if (localTracks.isEmpty()) {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .padding(innerPadding)
-                            .padding(horizontal = 10.dp),
-                        contentAlignment = Alignment.Center
+        Crossfade(
+            targetState = state.value.playbackStatus
+        ) { status ->
+            when (status) {
+                PlaybackCurrentStatus.PlayingQueue -> {
+                    Column(
+                        modifier = Modifier.fillMaxSize(),
+                        horizontalAlignment = Alignment.Start
                     ) {
+                        AsyncImage(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(400.dp)
+                                .padding(10.dp)
+                                .clip(RoundedCornerShape(12.dp)),
+                            model = "content://media/external/audio/albumart".toUri().buildUpon()
+                                .appendPath(state.value.currentTrack?.albumId.toString())
+                                .build(),
+                            contentDescription = "Album cover for ${currentTrack?.name}",
+                            contentScale = ContentScale.Crop,
+                            placeholder = painterResource(R.drawable.play_arrow),
+                            error = painterResource(R.drawable.play_arrow),
+                            fallback = painterResource(R.drawable.play_arrow)
+                        )
                         Text(
-                            text = stringResource(R.string.tracks_not_found),
-                            style = Typography.labels
+                            modifier = Modifier.padding(15.dp),
+                            text = state.value.currentTrack?.name ?: "Unknown track name",
+                            style = Typography.h1,
                         )
                     }
-                } else {
-                    AsyncImage(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(animatedBoxSize.value)
-                            .padding(10.dp)
-                            .clip(RoundedCornerShape(8.dp)),
-                        model = albumArtUri,
-                        contentDescription = "Album cover for ${currentTrack?.name}",
-                        contentScale = ContentScale.Crop,
-                        placeholder = painterResource(R.drawable.play_arrow),
-                        error = painterResource(R.drawable.play_arrow),
-                        fallback = painterResource(R.drawable.play_arrow)
-                    )
-                    LazyColumn(
-                        contentPadding = innerPadding,
-                        modifier = Modifier.fillMaxSize()
-                    ) {
-                        items(filteredList.size) { index ->
-                            TrackItem(
-                                track = filteredList[index],
-                                onClick = {
-                                    playLocalFile(filteredList[index].data, index)
-                                    currentTrack = filteredList[index]
-                                },
-                                state = state.value.playingTrackIndex == index
+                }
+
+                else -> {
+                    if (!storagePermissionState.status.isGranted) {
+                        Column(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .padding(innerPadding),
+                            verticalArrangement = Arrangement.Center,
+                            horizontalAlignment = Alignment.CenterHorizontally
+                        ) {
+                            Text(
+                                "Разрешение на чтение файлов не предоставлено.",
+                                style = Typography.labels
                             )
+                            Spacer(modifier = Modifier.height(8.dp))
+                            Button(onClick = { storagePermissionState.launchPermissionRequest() }) {
+                                Text("Предоставить разрешение", style = Typography.buttonsText)
+                            }
+                        }
+                    } else {
+                        Column(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .padding(innerPadding),
+                        ) {
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(horizontal = 20.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(
+                                    modifier = Modifier.weight(1f),
+                                    text = "Local Music: ${localTracks.size} tracks",
+                                    style = Typography.h2
+                                )
+                                IconButton(
+                                    onClick = {
+                                        if (storagePermissionState.status.isGranted) {
+                                            updateTrackList()
+                                        } else {
+                                            storagePermissionState.launchPermissionRequest()
+                                        }
+                                    }) {
+                                    Icon(
+                                        painter = painterResource(R.drawable.refresh),
+                                        contentDescription = "Refresh files",
+                                        tint = animateRefreshColor.value
+                                    )
+                                }
+                                IconButton(
+                                    onClick = { isFilterActive = !isFilterActive }) {
+                                    Icon(
+                                        painter = painterResource(R.drawable.baseline_search_24),
+                                        contentDescription = "search",
+                                        tint = animateSearchColor.value
+                                    )
+                                }
+                            }
+                            Box(Modifier.height(5.dp)) {
+                                if (state.value.isLoading) LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
+                            }
+                            AnimatedVisibility(
+                                visible = isFilterActive,
+                                enter = fadeIn(animationSpec = tween(durationMillis = animationDuration)) + expandVertically(
+                                    animationSpec = tween(durationMillis = animationDuration)
+                                ),
+                                exit = fadeOut(animationSpec = tween(durationMillis = animationDuration)) + shrinkVertically(
+                                    animationSpec = tween(durationMillis = animationDuration)
+                                ),
+                            ) {
+                                OutlinedTextField(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(horizontal = 20.dp, vertical = 5.dp),
+                                    value = filterText,
+                                    onValueChange = { filterText = it },
+                                    singleLine = true,
+                                    keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done)
+                                )
+                            }
+                            if (localTracks.isEmpty()) {
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxSize()
+                                        .padding(innerPadding)
+                                        .padding(horizontal = 10.dp),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Text(
+                                        text = stringResource(R.string.tracks_not_found),
+                                        style = Typography.labels
+                                    )
+                                }
+                            } else {
+                                AsyncImage(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .height(animatedBoxSize.value)
+                                        .padding(10.dp)
+                                        .clip(RoundedCornerShape(8.dp)),
+                                    model = albumArtUri,
+                                    contentDescription = "Album cover for ${currentTrack?.name}",
+                                    contentScale = ContentScale.Crop,
+                                    placeholder = painterResource(R.drawable.play_arrow),
+                                    error = painterResource(R.drawable.play_arrow),
+                                    fallback = painterResource(R.drawable.play_arrow)
+                                )
+                                LazyColumn(
+                                    contentPadding = innerPadding,
+                                    modifier = Modifier.fillMaxSize()
+                                ) {
+                                    items(filteredList.size) { index ->
+                                        TrackItem(
+                                            track = filteredList[index],
+                                            onClick = {
+                                                playLocalFile(filteredList[index].data, index)
+                                                currentTrack = filteredList[index]
+                                            },
+                                            state = state.value.playingTrackIndex == index
+                                        )
+                                    }
+                                }
+                            }
                         }
                     }
                 }
@@ -241,40 +282,6 @@ fun ScreenLocalPlayer(
         }
     }
 }
-
-//private fun getLocalMusicFiles(context: Context): List<Track> {
-//    val trackList = mutableListOf<Track>()
-//    val projection = arrayOf(
-//        MediaStore.Audio.Media._ID,
-//        MediaStore.Audio.Media.DISPLAY_NAME,
-//        MediaStore.Audio.Media.DATA,
-//        MediaStore.Audio.Media.DURATION,
-//        MediaStore.Audio.Media.ALBUM_ID,
-//    )
-//    val selection = "${MediaStore.Audio.Media.IS_MUSIC} != 0"
-//    context.contentResolver.query(
-//        MediaStore.Audio.Media.EXTERNAL_CONTENT_URI,     //EXTERNAL для флешки INTERNAL для внутренней памяти
-//        projection,
-//        selection,
-//        null,
-//        null
-//    )?.use { cursor ->
-//        val idColumn = cursor.getColumnIndexOrThrow(MediaStore.Audio.Media._ID)
-//        val nameColumn = cursor.getColumnIndexOrThrow(MediaStore.Audio.Media.DISPLAY_NAME)
-//        val dataColumn = cursor.getColumnIndexOrThrow(MediaStore.Audio.Media.DATA)
-//        val duration = cursor.getColumnIndexOrThrow(MediaStore.Audio.Media.DURATION)
-//        val albumId = cursor.getColumnIndexOrThrow(MediaStore.Audio.Media.ALBUM_ID)
-//        while (cursor.moveToNext()) {
-//            val id = cursor.getLong(idColumn)
-//            val name = cursor.getString(nameColumn)
-//            val data = cursor.getString(dataColumn)
-//            val duration = cursor.getInt(duration)
-//            val album = cursor.getLong(albumId)
-//            trackList.add(Track(id, name, data, duration, album))
-//        }
-//    }
-//    return trackList.sortedWith(compareBy { it.name })
-//}
 
 @Preview
 @Composable
@@ -287,7 +294,7 @@ private fun Preview() {
             playPrevious = {},
             playNext = {},
             updateTrackList = {},
-            playTracklist = {}
+            playTracklist = {},
         )
     }
 }

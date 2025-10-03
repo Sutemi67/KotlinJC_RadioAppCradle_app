@@ -16,13 +16,12 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.State
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.painterResource
@@ -36,7 +35,7 @@ import apc.appcradle.radioappcradle.presentation.ui.theme.RadioAppCradleTheme
 
 @Composable
 fun PlaybackControls(
-    uiState: State<PlayerUiState>,
+    state: State<PlayerUiState>,
     playPrevious: () -> Unit,
     playNext: () -> Unit,
     playTracklist: () -> Unit,
@@ -44,15 +43,13 @@ fun PlaybackControls(
     val borderColor = MaterialTheme.colorScheme.surfaceContainerHighest
     val bgColor = MaterialTheme.colorScheme.surfaceContainer
 
-    var rowSize by remember { mutableStateOf(50.dp) }
-    val expanded by remember(uiState.value.playbackStatus) { mutableStateOf(uiState.value.playbackStatus == PlaybackCurrentStatus.PlayingQueue) }
+    val expanded by remember(state.value.playbackStatus) { mutableStateOf(state.value.playbackStatus == PlaybackCurrentStatus.PlayingQueue) }
 
     val animateSize =
-        animateDpAsState(targetValue = rowSize, animationSpec = tween(durationMillis = 2000))
-
-    LaunchedEffect(expanded) {
-        rowSize = if (expanded) 130.dp else 50.dp
-    }
+        animateDpAsState(
+            targetValue = if (expanded) 130.dp else 50.dp,
+            animationSpec = tween(durationMillis = 2000)
+        )
 
     Row(
         modifier = Modifier
@@ -74,10 +71,9 @@ fun PlaybackControls(
             Icon(
                 modifier = Modifier.fillMaxSize(),
                 painter = painterResource(R.drawable.previous_button),
-                contentDescription = "Next"
+                contentDescription = "Previous track"
             )
         }
-
         IconButton(
             modifier = Modifier
                 .padding(5.dp)
@@ -87,7 +83,7 @@ fun PlaybackControls(
         ) {
             Icon(
                 modifier = Modifier.fillMaxSize(),
-                painter = when (uiState.value.playbackStatus) {
+                painter = when (state.value.playbackStatus) {
                     PlaybackCurrentStatus.PlayingQueue -> painterResource(R.drawable.pause)
                     else -> painterResource(R.drawable.play)
                 },
@@ -116,12 +112,14 @@ fun PlaybackControls(
 @Composable
 private fun Preview() {
     RadioAppCradleTheme {
-        val mockUiState = remember { mutableStateOf(PlayerUiState()) }
-        PlaybackControls(
-            uiState = mockUiState,
-            playTracklist = {},
-            playNext = {},
-            playPrevious = {}
-        )
+        Surface {
+            val mockUiState = remember { mutableStateOf(PlayerUiState()) }
+            PlaybackControls(
+                state = mockUiState,
+                playTracklist = {},
+                playNext = {},
+                playPrevious = {},
+            )
+        }
     }
 }

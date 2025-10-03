@@ -22,7 +22,6 @@ import com.google.common.util.concurrent.ListenableFuture
 
 class PlaybackService : MediaSessionService(), MediaSession.Callback {
 
-    //    private var playerInstance: Player? = null
     private var mediaSessionInstance: MediaSession? = null
     private var player: Player? = null
     private var mediaSession: MediaSession? = null

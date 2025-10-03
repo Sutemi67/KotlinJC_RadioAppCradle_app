@@ -46,7 +46,7 @@ fun RadioAppCradleTheme(
         LocalTypography provides Typography
     ) {
         MaterialTheme(
-            colorScheme = colorScheme,
+            colorScheme = DarkColorScheme,
             content = content
         )
     }

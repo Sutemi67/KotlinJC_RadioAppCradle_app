@@ -50,7 +50,7 @@ fun PlayerMainHost() {
                 playLocalFile = { filePath, index -> viewModel.playLocalFile(filePath, index) },
                 playNext = { viewModel.playNext() },
                 playPrevious = { viewModel.playPrevious() },
-                playTracklist = { trackList -> viewModel.playTrackList(trackList) }
+                playTracklist = { viewModel.playTrackList() },
             )
         }
     }

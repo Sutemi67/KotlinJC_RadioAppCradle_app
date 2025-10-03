@@ -5,5 +5,6 @@ data class PlayerUiState(
     val playingTrackIndex: Int? = null,
     val isLoading: Boolean = true,
     val isPlayerQueuePrepared: Boolean = false,
-    val localTrackList: List<Track> = emptyList()
+    val localTrackList: List<Track> = emptyList(),
+    val currentTrack: Track? = null
 )
