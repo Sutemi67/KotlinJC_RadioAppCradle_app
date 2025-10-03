@@ -53,7 +53,6 @@ import androidx.core.net.toUri
 import apc.appcradle.radioappcradle.R
 import apc.appcradle.radioappcradle.domain.PlaybackCurrentStatus
 import apc.appcradle.radioappcradle.domain.PlayerUiState
-import apc.appcradle.radioappcradle.domain.Track
 import apc.appcradle.radioappcradle.presentation.ui.theme.RadioAppCradleTheme
 import apc.appcradle.radioappcradle.presentation.ui.theme.Typography
 import coil3.compose.AsyncImage
@@ -74,12 +73,10 @@ fun ScreenLocalPlayer(
     val animationDuration = 1000
     val activeColor = MaterialTheme.colorScheme.primary
     val inactiveColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.4f)
+    val localTracks = state.value.localTrackList
 
-    var currentTrack: Track? by remember { mutableStateOf(null) }
-    var localTracks by remember(state.value.localTrackList) { mutableStateOf(state.value.localTrackList) }
     var isFilterActive by remember { mutableStateOf(false) }
     var filterText by remember { mutableStateOf("") }
-
     val normalizedQuery by remember(filterText) { derivedStateOf { filterText.trim().lowercase() } }
     val filteredList by remember(localTracks, normalizedQuery) {
         derivedStateOf {
@@ -90,7 +87,7 @@ fun ScreenLocalPlayer(
         }
     }
     val albumArtUri = "content://media/external/audio/albumart".toUri().buildUpon()
-        .appendPath(currentTrack?.albumId.toString()).build()
+        .appendPath(state.value.currentTrack?.albumId.toString()).build()
 
     val animateSearchColor = animateColorAsState(
         targetValue = if (isFilterActive) activeColor else inactiveColor,
@@ -144,7 +141,7 @@ fun ScreenLocalPlayer(
                                 .clip(RoundedCornerShape(12.dp)),
                             model = "content://media/external/audio/albumart".toUri().buildUpon()
                                 .appendPath(state.value.currentTrack?.albumId.toString()).build(),
-                            contentDescription = "Album cover for ${currentTrack?.name}",
+                            contentDescription = "Album cover for ${state.value.currentTrack?.name}",
                             contentScale = ContentScale.Crop,
                             placeholder = painterResource(R.drawable.play_arrow),
                             error = painterResource(R.drawable.play_arrow),
@@ -259,7 +256,7 @@ fun ScreenLocalPlayer(
                                         .padding(10.dp)
                                         .clip(RoundedCornerShape(8.dp)),
                                     model = albumArtUri,
-                                    contentDescription = "Album cover for ${currentTrack?.name}",
+                                    contentDescription = "Album cover for ${state.value.currentTrack?.name}",
                                     contentScale = ContentScale.Crop,
                                     placeholder = painterResource(R.drawable.play_arrow),
                                     error = painterResource(R.drawable.play_arrow),
